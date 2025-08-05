@@ -1,0 +1,486 @@
+{
+  "data" : {
+    "meta" : {
+      "name" : "CherubRock_OctWh",
+      "application" : "HX Edit",
+      "build_sha" : "d972399",
+      "modifieddate" : 1754392248,
+      "appversion" : 58851328
+    },
+    "device" : 2162693,
+    "tone" : {
+      "variax" : {
+        "@variax_model" : 0,
+        "@variax_str4tuning" : 0,
+        "@variax_str1tuning" : 0,
+        "@variax_lockctrls" : 0,
+        "@variax_str2tuning" : 0,
+        "@variax_customtuning" : true,
+        "@variax_magmode" : false,
+        "@variax_str5tuning" : 0,
+        "@variax_toneknob" : -0.10000002384185791,
+        "@variax_str3tuning" : 0,
+        "@variax_str6tuning" : 0,
+        "@variax_volumeknob" : -0.10000002384185791
+      },
+      "commandFS1" : {
+        "@command" : 15,
+        "@press" : 3,
+        "@fs_primary" : true,
+        "@relhold" : 0,
+        "@behavior" : 0,
+        "@fs_enabled" : false,
+        "@fs_ledcolor" : 462860,
+        "@fs_label" : "Snapshot",
+        "@fs_momentary" : true
+      },
+      "dsp1" : {
+
+      },
+      "snapshot1" : {
+        "@name" : "HOOK",
+        "@tempo" : 140,
+        "@valid" : true,
+        "blocks" : {
+          "dsp0" : {
+            "block0" : true,
+            "block4" : true,
+            "block1" : true,
+            "block5" : true,
+            "block2" : false,
+            "block3" : false
+          }
+        },
+        "commands" : {
+          "commandFS3" : {
+            "@relhold" : 0,
+            "@press" : 5,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS1" : {
+            "@relhold" : 0,
+            "@press" : 3,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS4" : {
+            "@relhold" : 0,
+            "@press" : 6,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS2" : {
+            "@relhold" : 0,
+            "@press" : 4,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          }
+        },
+        "@pedalstate" : 0,
+        "@ledcolor" : 2,
+        "controllers" : {
+          "dsp0" : {
+            "block3" : {
+              "Pedal" : {
+                "@fs_enabled" : false,
+                "@value" : 0.5
+              },
+              "Toe" : {
+                "@fs_enabled" : false,
+                "@value" : 12
+              }
+            }
+          }
+        },
+        "@custom_name" : true
+      },
+      "commandFS3" : {
+        "@command" : 15,
+        "@press" : 5,
+        "@fs_primary" : true,
+        "@relhold" : 0,
+        "@behavior" : 0,
+        "@fs_enabled" : false,
+        "@fs_ledcolor" : 462860,
+        "@fs_label" : "Snapshot",
+        "@fs_momentary" : true
+      },
+      "controller" : {
+        "dsp0" : {
+          "block3" : {
+            "Pedal" : {
+              "@fs_momentary" : true,
+              "@min" : 0,
+              "@max" : 0.5,
+              "@snapshot_disable" : true,
+              "@fs_primary" : true,
+              "@controller" : 8,
+              "@fs_enabled" : false,
+              "@fs_ledcolor" : 462860,
+              "@fs_customlabel" : "Diveb",
+              "@fs_label" : "Psition"
+            },
+            "Toe" : {
+              "@fs_momentary" : true,
+              "@min" : -12,
+              "@max" : 12,
+              "@snapshot_disable" : false,
+              "@fs_primary" : true,
+              "@controller" : 7,
+              "@fs_enabled" : false,
+              "@fs_ledcolor" : 462860,
+              "@fs_customlabel" : "WHAM +1",
+              "@fs_label" : "ToePit"
+            }
+          }
+        }
+      },
+      "dsp0" : {
+        "join" : {
+          "@model" : "HD2_AppDSPFlowJoin",
+          "B Pan" : 0.5,
+          "@no_snapshot_bypass" : false,
+          "B Level" : 0,
+          "A Level" : 0,
+          "A Pan" : 0.5,
+          "@position" : 9,
+          "Level" : 0,
+          "@enabled" : true,
+          "B Polarity" : false
+        },
+        "block3" : {
+          "@model" : "HD2_PitchPitchWham",
+          "@position" : 4,
+          "@no_snapshot_bypass" : false,
+          "Heel" : -24,
+          "Toe" : 12,
+          "@enabled" : false,
+          "@path" : 0,
+          "@type" : 0,
+          "Mix" : 1,
+          "Level" : 0,
+          "@stereo" : false,
+          "Pedal" : 0
+        },
+        "block2" : {
+          "@model" : "HD2_VolPanGain",
+          "@no_snapshot_bypass" : false,
+          "@path" : 0,
+          "@stereo" : false,
+          "@type" : 0,
+          "Gain" : 4,
+          "@position" : 3,
+          "@enabled" : true
+        },
+        "inputB" : {
+          "@input" : 0,
+          "@model" : "HelixFx_AppDSPFlowInput"
+        },
+        "block1" : {
+          "@model" : "HD2_DistTriangleFuzz",
+          "@no_snapshot_bypass" : false,
+          "@path" : 0,
+          "@stereo" : false,
+          "@type" : 0,
+          "Sustain" : 0.64999997615814209,
+          "@position" : 2,
+          "Level" : 0.33000004291534424,
+          "Tone" : 0.5,
+          "@enabled" : true
+        },
+        "outputB" : {
+          "@model" : "HelixFx_AppDSPFlowOutput",
+          "@output" : 0,
+          "pan" : 0.5,
+          "gain" : 0
+        },
+        "inputA" : {
+          "@input" : 1,
+          "@model" : "HelixFx_AppDSPFlowInput"
+        },
+        "split" : {
+          "@model" : "HD2_AppDSPFlowSplitY",
+          "BalanceA" : 0.5,
+          "@no_snapshot_bypass" : false,
+          "bypass" : false,
+          "@position" : 0,
+          "@enabled" : true,
+          "BalanceB" : 0.5
+        },
+        "block0" : {
+          "@model" : "HD2_CompressorRedSqueeze",
+          "@no_snapshot_bypass" : false,
+          "@path" : 0,
+          "@stereo" : false,
+          "@type" : 0,
+          "@position" : 1,
+          "Level" : 0.79999923706054688,
+          "Mix" : 0.5,
+          "@enabled" : true,
+          "Sensitivity" : 0.5
+        },
+        "block5" : {
+          "@model" : "HD2_ReverbPlate",
+          "@position" : 6,
+          "@no_snapshot_bypass" : false,
+          "LowCut" : 75,
+          "@enabled" : true,
+          "@path" : 0,
+          "@trails" : true,
+          "@type" : 7,
+          "Mix" : 0.14999997615814209,
+          "Level" : 0,
+          "Decay" : 0.5,
+          "HighCut" : 5000,
+          "Predelay" : 0.014999985694885254
+        },
+        "outputA" : {
+          "@model" : "HelixFx_AppDSPFlowOutput",
+          "@output" : 1,
+          "pan" : 0.5,
+          "gain" : 0
+        },
+        "block4" : {
+          "@model" : "HD2_DelaySimpleDelay",
+          "@position" : 5,
+          "@no_snapshot_bypass" : false,
+          "Feedback" : 0.27999997138977051,
+          "SyncSelect1" : 9,
+          "Scale" : 0.75,
+          "@enabled" : true,
+          "TempoSync1" : true,
+          "@path" : 0,
+          "@trails" : true,
+          "@type" : 7,
+          "Mix" : 0.18000006675720215,
+          "Time" : 0.45000004768371582,
+          "Level" : 0,
+          "@stereo" : false
+        }
+      },
+      "snapshot2" : {
+        "@name" : "ALT",
+        "@tempo" : 140,
+        "@valid" : true,
+        "blocks" : {
+          "dsp0" : {
+            "block0" : true,
+            "block4" : false,
+            "block1" : true,
+            "block5" : true,
+            "block2" : false,
+            "block3" : false
+          }
+        },
+        "commands" : {
+          "commandFS3" : {
+            "@relhold" : 0,
+            "@press" : 5,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS1" : {
+            "@relhold" : 0,
+            "@press" : 3,
+            "@fs_enabled" : false,
+            "@behavior" : 1
+          },
+          "commandFS4" : {
+            "@relhold" : 0,
+            "@press" : 6,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS2" : {
+            "@relhold" : 0,
+            "@press" : 4,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          }
+        },
+        "@pedalstate" : 0,
+        "@ledcolor" : 8,
+        "controllers" : {
+          "dsp0" : {
+            "block3" : {
+              "Pedal" : {
+                "@fs_enabled" : false,
+                "@value" : 0
+              },
+              "Toe" : {
+                "@fs_enabled" : false,
+                "@value" : -12
+              }
+            }
+          }
+        },
+        "@custom_name" : true
+      },
+      "global" : {
+        "@PowercabVoicing" : 0,
+        "@model" : "@global_params",
+        "@topology0" : "A",
+        "@cursor_dsp" : 0,
+        "@PowercabMode" : 0,
+        "@guitarpad" : 0,
+        "@pedalstate" : 0,
+        "@cursor_group" : "block3",
+        "@DtSelect" : 2,
+        "@cursor_path" : 0,
+        "@current_snapshot" : 3,
+        "@tempo" : 140,
+        "@cursor_position" : 4,
+        "@topology1" : 0,
+        "@PowercabSelect" : 2,
+        "@guitarinputZ" : 0
+      },
+      "commandFS2" : {
+        "@command" : 15,
+        "@press" : 4,
+        "@fs_primary" : true,
+        "@relhold" : 0,
+        "@behavior" : 0,
+        "@fs_enabled" : false,
+        "@fs_ledcolor" : 462860,
+        "@fs_label" : "Snapshot",
+        "@fs_momentary" : true
+      },
+      "snapshot3" : {
+        "@name" : "SOLO (+Wha",
+        "@tempo" : 140,
+        "@valid" : true,
+        "blocks" : {
+          "dsp0" : {
+            "block0" : true,
+            "block4" : true,
+            "block1" : true,
+            "block5" : true,
+            "block2" : true,
+            "block3" : false
+          }
+        },
+        "commands" : {
+          "commandFS3" : {
+            "@relhold" : 0,
+            "@press" : 5,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS1" : {
+            "@relhold" : 0,
+            "@press" : 3,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS4" : {
+            "@relhold" : 0,
+            "@press" : 6,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS2" : {
+            "@relhold" : 0,
+            "@press" : 4,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          }
+        },
+        "@pedalstate" : 0,
+        "@ledcolor" : 9,
+        "controllers" : {
+          "dsp0" : {
+            "block3" : {
+              "Pedal" : {
+                "@fs_enabled" : false,
+                "@value" : 0
+              },
+              "Toe" : {
+                "@fs_enabled" : false,
+                "@value" : 12
+              }
+            }
+          }
+        },
+        "@custom_name" : true
+      },
+      "commandFS4" : {
+        "@command" : 15,
+        "@press" : 6,
+        "@fs_primary" : true,
+        "@relhold" : 0,
+        "@behavior" : 0,
+        "@fs_enabled" : false,
+        "@fs_ledcolor" : 462860,
+        "@fs_label" : "Snapshot",
+        "@fs_momentary" : true
+      },
+      "snapshot0" : {
+        "@name" : "RHYTHM",
+        "@tempo" : 140,
+        "@valid" : true,
+        "blocks" : {
+          "dsp0" : {
+            "block0" : true,
+            "block4" : false,
+            "block1" : true,
+            "block5" : true,
+            "block2" : false,
+            "block3" : false
+          }
+        },
+        "commands" : {
+          "commandFS3" : {
+            "@relhold" : 0,
+            "@press" : 5,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS1" : {
+            "@relhold" : 0,
+            "@press" : 3,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS4" : {
+            "@relhold" : 0,
+            "@press" : 6,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          },
+          "commandFS2" : {
+            "@relhold" : 0,
+            "@press" : 4,
+            "@fs_enabled" : false,
+            "@behavior" : 0
+          }
+        },
+        "@pedalstate" : 0,
+        "@ledcolor" : 1,
+        "controllers" : {
+          "dsp0" : {
+            "block3" : {
+              "Pedal" : {
+                "@fs_enabled" : false,
+                "@value" : 0
+              },
+              "Toe" : {
+                "@fs_enabled" : false,
+                "@value" : -12
+              }
+            }
+          }
+        },
+        "@custom_name" : true
+      }
+    },
+    "device_version" : 58720256
+  },
+  "meta" : {
+    "original" : 0,
+    "pbn" : 0,
+    "premium" : 0
+  },
+  "schema" : "L6Preset",
+  "version" : 6
+}

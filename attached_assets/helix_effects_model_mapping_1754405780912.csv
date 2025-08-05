@@ -1,0 +1,152 @@
+Friendly Name,Internal Reference
+10 Band Graphic,HD2_EQGraphic10Band
+12-String,VIC_PitchTwelveString
+3 Note Generator,HD2_Synth3NoteGenerator
+3-Band Comp,HD2_Compressor3BandComp
+4 OSC Generator,HD2_Synth4OSCGenerator
+4-Voice Chorus,HD2_Chorus4Voice
+60s Bias Trem,HD2_Tremolo60sBiasTrem
+70s Chorus,HD2_Chorus70sChorus
+ADT,HD2_DelayADT
+AM Ring Mod,HD2_RingModulatorAMRingMod
+Acoustic Sim,L6SPB_AcousGtrSim
+Adriatic Delay,HD2_DelayAdriaticDelay
+Adriatic Swell,HD2_DelaySwellAdriatic
+Alpaca Rouge,HD2_DistAlpacaRouge
+Ampeg Opto Comp,HD2_CompressorOptoComp
+Arbitrator Fuzz,HD2_DistArbitratorFuzz
+Asheville Pattrn,HD2_FilterAshevillePattrn
+Auto Filter,HD2_FilterAutoFilter
+Autoswell,HD2_CompressorAutoSwell
+Ballistic Fuzz,HD2_DistBallisticFuzz
+Bighorn Fuzz,HD2_DistRamsHead
+Bitcrusher,HD2_DistBitcrusher
+Bleat Chop Trem,HD2_TremoloPattern
+Boctaver,VIC_PitchBoctaver
+Bubble Vibrato,HD2_VibratoBubbleVibrato
+Bucket Brigade,HD2_DelayBucketBrigade
+Cali Q Graphic,HD2_CaliQ
+Chorus,HD2_Chorus
+Chrome,HD2_WahChrome
+Chrome Custom,HD2_WahChromeCustom
+Clawthorn Drive,HD2_DistClawthornDrive
+Colorful,HD2_WahColorful
+Compulsive Drive,HD2_DistCompulsiveDrive
+Conductor,HD2_WahConductor
+Cosmos Echo,HD2_DelayCosmosEcho
+Courtesan Flange,HD2_FlangerCourtesanFlange
+Crisscross,HD2_DelayCrissCross
+Dark Dove Fuzz,HD2_DistDarkDoveFuzz
+Deez One Mod,HD2_DistDeezOneMod
+Deez One Vintage,HD2_DistDeezOneVintage
+Deluxe Comp,HD2_CompressorDeluxeComp
+Deluxe Phaser,HD2_PhaserDeluxePhaser
+Deranged Master,HD2_DistDerangedMaster
+Double Take,HD2_DelayDoubleDouble
+Double Tank,HD2_ReverbDoubleTank
+Dual Pitch,HD2_PitchDualPitch
+Ducked Delay,HD2_DelayDuckedDelay
+Dyhana Drive,HD2_DistDhyanaDrive
+Dynamic Ambience,VIC_ReverbDynAmbience
+Dynamic Bloom,VIC_ReverbDynBloom
+Dynamic Hall,VIC_ReverbRotating
+Dynamic Plate,VIC_DynPlate
+Dynamic Room,VIC_ReverbDynRoom
+Dynamix Flanger,HD2_FlangerDynamixFlanger
+Elephant Man,HD2_DelayElephantMan
+Euclidean Delay,Victoria_EuclideanDelay
+Fassel,HD2_WahFassel
+Feedbacker,VIC_FeedbackSim
+FlexoVibe,VIC_FlexoVibe
+Gain,HD2_VolPanGain
+Ganymede,HD2_ReverbGanymede
+Glitch Delay,VIC_DelayGlitch
+Glitz,HD2_ReverbGlitz
+Gray Flanger,HD2_FlangerGrayFlanger
+Hard Gate,HD2_GateHardGate
+Harmonic Flanger,HD2_FlangerHarmonicFlanger
+Harmonic Tremolo,HD2_TremoloHarmonic
+Hedgehog D9,HD2_DistHedgehogD9
+Heir Apparent,HD2_DistHeirApparent
+Heliosphere,HD2_DelayHeliosphere
+Horizon Drive,HD2_DistHorizonDrive
+Horizon Gate,HD2_GateHorizonGate
+Hot Springs,HD2_ReverbHxSpring
+IR 1024,HD2_ImpulseResponse1024
+IR 2048,HD2_ImpulseResponse2048
+Industrial Fuzz,HD2_DistIndustrialFuzz
+KWB,HD2_DistKWB
+Kinky Boost,HD2_DistKinkyBoost
+Kinky Comp,HD2_CompressorKinkyComp
+LA Studio Comp,HD2_CompressorLAStudioComp
+Legendary Drive,HD2_DistLegendaryDrive
+Low and High Cut,HD2_EQLowCutHighCut
+Low/High Shelf,HD2_EQLowShelfHighShelf
+Megaphone,HD2_DistMegaphone
+Minotaur,HD2_DistMinotaur
+Mod/Chorus Echo,HD2_DelayModChorusEcho
+Multi Pass,HD2_DelayMultiPass
+Mutant Filter,HD2_FilterMutantFilter
+Mystery Filter,HD2_FilterMysterFilter
+Noise Gate,HD2_GateNoiseGate
+Nonlinear,HD2_ReverbNonLinear
+Obsidian 7000,HD2_DistObsidian7000
+Optical Trem,HD2_TremoloOpticalTrem
+Parametric,HD2_EQParametric
+Pebble Phaser,HD2_PhaserPebblePhaser
+Pillars,HD2_DistPillars
+Pitch Echo,HD2_DelayPitch
+Pitch Wham,HD2_PitchPitchWham
+PlastiChorus,HD2_ChorusPlastiChorus
+Plateaux,HD2_ReverbPlateaux
+Pocket Fuzz,HD2_DistPocketFuzz
+Poly Capo,L6SPB_PolyDowntune
+Poly Detune,L6SPB_PolyChorus
+Poly Pitch,L6SPB_PolyPitch
+Poly Sustain,VIC_DelayPolySustain
+Poly Wham,L6SPB_PolyWham
+Prize Drive,HD2_DistPrizeDrive
+Ratatouille Dist,HD2_DistRatatouilleDist
+Ratchet,VIC_DelayRatchet
+Red Squeeze,HD2_CompressorRedSqueeze
+Regal Bass DI,HD2_DistRegalBassDI
+Retro Reel,HD2_RetroReel
+Reverse Delay,HD2_DelayReverseDelay
+Rochester Comp,HD2_CompressorRochesterComp
+Scream 808,HD2_DistScream808
+Script Mod Phase,HD2_PhaserScriptModPhase
+Searchlights,HD2_ReverbSearchlights
+Shimmer,VIC_ReverbShimmer
+Simple Delay,HD2_DelaySimpleDelay
+Simple EQ,HD2_EQSimple3Band
+Simple Pitch,HD2_PitchSimplePitch
+Simple Tilt,HD2_EQSimpleTilt
+Stupor OD,HD2_DistStuporOD
+Swedish Chainsaw,HD2_DistSwedishChainsaw
+Sweep Echo,HD2_DelaySweepEcho
+Teardrop 310,HD2_WahTeardrop310
+Teardrop Bass Q,HD2_WahTeardropBassQ
+Teemah!,HD2_DistTeemah
+Tesselator,VIC_DelayStutterEdit
+Thrifter Fuzz,HD2_DistThrifterFuzz
+Throaty,HD2_WahThroaty
+Tone Sovereign,HD2_DistToneSovereign
+Top Secret OD,HD2_DistTopSecretOD
+Transistor Tape,HD2_DelayTransistorTape
+Tremolo,HD2_TremoloTremolo
+Triangle Fuzz,HD2_DistTriangleFuzz
+Twin Harmony,HD2_PitchTwinHarmony
+Tycoctavia Fuzz,HD2_DistTycoctaviaFuzz
+UK Wah 846,HD2_WahUKWah846
+Ubiquitous Vibe,HD2_PhaserUbiquitousVibe
+Valve Driver,HD2_DistValveDriver
+Vermin Dist,HD2_DistVerminDist
+Vetta Wah,HD2_WahVettaWah
+Vintage Digital,HD2_DelayVintageDigitalV2
+Vintage Swell,HD2_DelaySwellVintageDigital
+Vital Boost,HD2_DistVitalBoost
+Vital Dist,HD2_DistVitalDist
+Volume,HD2_VolPanVol
+Weeper,HD2_WahWeeper
+Wringer Fuzz,HD2_DistWringerFuzz
+Xenomorph Fuzz,HD2_DistXenomorphFuzz
