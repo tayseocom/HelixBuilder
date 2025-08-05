@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertPresetSchema } from "@shared/schema";
 import { z } from "zod";
+import { generateEffectsSuggestions, type SuggestionRequest } from "./ai-suggestions";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -80,6 +81,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete preset" });
+    }
+  });
+
+  // AI Suggestions endpoint
+  app.post("/api/ai-suggestions", async (req, res) => {
+    try {
+      const suggestionRequestSchema = z.object({
+        description: z.string().min(1, "Description is required"),
+        artist: z.string().optional(),
+        genre: z.string().optional()
+      });
+
+      const validatedData = suggestionRequestSchema.parse(req.body);
+      const suggestions = await generateEffectsSuggestions(validatedData);
+      
+      res.json(suggestions);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      } else {
+        console.error('AI suggestions error:', error);
+        res.status(500).json({ message: "Failed to generate AI suggestions" });
+      }
     }
   });
 
