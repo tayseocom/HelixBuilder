@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(60, 4.8%, 95.9%);
+  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --accent: hsl(60, 4.8%, 95.9%);
+  --accent-foreground: hsl(24, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+
+  /* Studio colors for the dark theme */
+  --studio-900: hsl(0, 0%, 7.1%);
+  --studio-800: hsl(0, 0%, 11.8%);
+  --studio-700: hsl(0, 0%, 17.6%);
+  --studio-600: hsl(0, 0%, 25.1%);
+  --studio-500: hsl(0, 0%, 40%);
+  --studio-400: hsl(0, 0%, 60%);
+  --studio-300: hsl(0, 0%, 80%);
+  --studio-200: hsl(0, 0%, 87.8%);
+  --studio-100: hsl(0, 0%, 96.1%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-studio-900 {
+    background-color: var(--studio-900);
+  }
+  .bg-studio-800 {
+    background-color: var(--studio-800);
+  }
+  .bg-studio-700 {
+    background-color: var(--studio-700);
+  }
+  .bg-studio-600 {
+    background-color: var(--studio-600);
+  }
+  .bg-studio-500 {
+    background-color: var(--studio-500);
+  }
+  .bg-studio-400 {
+    background-color: var(--studio-400);
+  }
+  .bg-studio-300 {
+    background-color: var(--studio-300);
+  }
+  .bg-studio-200 {
+    background-color: var(--studio-200);
+  }
+  .bg-studio-100 {
+    background-color: var(--studio-100);
+  }
+
+  .text-studio-900 {
+    color: var(--studio-900);
+  }
+  .text-studio-800 {
+    color: var(--studio-800);
+  }
+  .text-studio-700 {
+    color: var(--studio-700);
+  }
+  .text-studio-600 {
+    color: var(--studio-600);
+  }
+  .text-studio-500 {
+    color: var(--studio-500);
+  }
+  .text-studio-400 {
+    color: var(--studio-400);
+  }
+  .text-studio-300 {
+    color: var(--studio-300);
+  }
+  .text-studio-200 {
+    color: var(--studio-200);
+  }
+  .text-studio-100 {
+    color: var(--studio-100);
+  }
+
+  .border-studio-900 {
+    border-color: var(--studio-900);
+  }
+  .border-studio-800 {
+    border-color: var(--studio-800);
+  }
+  .border-studio-700 {
+    border-color: var(--studio-700);
+  }
+  .border-studio-600 {
+    border-color: var(--studio-600);
+  }
+  .border-studio-500 {
+    border-color: var(--studio-500);
+  }
+  .border-studio-400 {
+    border-color: var(--studio-400);
+  }
+  .border-studio-300 {
+    border-color: var(--studio-300);
+  }
+  .border-studio-200 {
+    border-color: var(--studio-200);
+  }
+  .border-studio-100 {
+    border-color: var(--studio-100);
+  }
+
+  .hover\:bg-studio-600:hover {
+    background-color: var(--studio-600);
+  }
+  .hover\:border-studio-600:hover {
+    border-color: var(--studio-600);
+  }
+}
