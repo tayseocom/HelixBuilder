@@ -41,21 +41,45 @@ export default function AISuggestions({ onApplySuggestion }: AISuggestionsProps)
 
   const suggestionMutation = useMutation({
     mutationFn: async (data: { description: string; artist?: string; genre?: string }) => {
-      const response = await fetch('/api/ai-suggestions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      console.log('🎸 [CLIENT] Starting AI suggestion request:', data);
       
-      if (!response.ok) {
-        throw new Error('Failed to generate suggestions');
+      try {
+        const response = await fetch('/api/ai-suggestions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+        
+        console.log('🎸 [CLIENT] Received response:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ [CLIENT] Error response:', errorText);
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+        
+        const result = await response.json() as AISuggestion;
+        console.log('✅ [CLIENT] Successfully parsed AI suggestion:', {
+          hasReasoning: !!result.reasoning,
+          effectChainLength: result.effectChain?.length || 0,
+          snapshotsLength: result.snapshots?.length || 0,
+          tipsLength: result.tips?.length || 0
+        });
+        
+        return result;
+      } catch (error) {
+        console.error('❌ [CLIENT] Request failed:', error);
+        throw error;
       }
-      
-      return response.json() as Promise<AISuggestion>;
     },
     onSuccess: (data: AISuggestion) => {
+      console.log('🎸 [CLIENT] Mutation success - setting suggestion data');
       setSuggestion(data);
       toast({
         title: "AI Suggestions Generated",
@@ -63,6 +87,7 @@ export default function AISuggestions({ onApplySuggestion }: AISuggestionsProps)
       });
     },
     onError: (error: any) => {
+      console.error('❌ [CLIENT] Mutation error:', error);
       toast({
         title: "Failed to Generate Suggestions",
         description: error.message || "Please try again with a different description.",
@@ -72,7 +97,10 @@ export default function AISuggestions({ onApplySuggestion }: AISuggestionsProps)
   });
 
   const handleGenerateSuggestions = () => {
+    console.log('🎸 [CLIENT] Generate suggestions button clicked');
+    
     if (!description.trim()) {
+      console.warn('❌ [CLIENT] Missing description');
       toast({
         title: "Description Required",
         description: "Please describe the sound you're trying to achieve.",
@@ -81,16 +109,26 @@ export default function AISuggestions({ onApplySuggestion }: AISuggestionsProps)
       return;
     }
 
-    suggestionMutation.mutate({
+    const requestData = {
       description: description.trim(),
       artist: artist.trim() || undefined,
       genre: genre.trim() || undefined,
-    });
+    };
+    
+    console.log('🎸 [CLIENT] Triggering mutation with:', requestData);
+    suggestionMutation.mutate(requestData);
   };
 
   const handleApplySuggestion = () => {
-    if (!suggestion) return;
+    console.log('🎸 [CLIENT] Apply suggestion button clicked');
+    
+    if (!suggestion) {
+      console.warn('❌ [CLIENT] No suggestion available to apply');
+      return;
+    }
 
+    console.log('🎸 [CLIENT] Converting AI suggestion to app format...');
+    
     // Convert AI suggestions to app format
     const effectBlocks: EffectBlock[] = Array.from({ length: 9 }, (_, i) => ({
       enabled: false,

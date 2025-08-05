@@ -31,7 +31,19 @@ export interface AISuggestion {
 }
 
 export async function generateEffectsSuggestions(request: SuggestionRequest): Promise<AISuggestion> {
+  console.log('🎸 [AI-SUGGESTIONS] Starting generation with request:', {
+    description: request.description,
+    artist: request.artist,
+    genre: request.genre
+  });
+
   const availableEffects = effectsMapping.map(e => e.friendly);
+  console.log('🎸 [AI-SUGGESTIONS] Loaded effects mapping:', {
+    totalEffects: availableEffects.length,
+    firstFew: availableEffects.slice(0, 5),
+    lastFew: availableEffects.slice(-5)
+  });
+
   const effectsList = availableEffects.join(", ");
   
   const prompt = `You are an expert guitar effects specialist with deep knowledge of Line 6 HX Effects and guitar tones across all genres and artists. 
@@ -92,9 +104,23 @@ Respond with JSON in this exact format:
 
 Provide 2-4 snapshots representing different song sections or intensity levels.`;
 
+  console.log('🎸 [AI-SUGGESTIONS] Checking OpenAI API key availability...');
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('❌ [AI-SUGGESTIONS] OPENAI_API_KEY not found in environment');
+    throw new Error('OpenAI API key not configured');
+  }
+  console.log('✅ [AI-SUGGESTIONS] OpenAI API key found');
+
+  console.log('🎸 [AI-SUGGESTIONS] Sending request to OpenAI...', {
+    model: "gpt-4o",
+    promptLength: prompt.length,
+    temperature: 0.3,
+    maxTokens: 2000
+  });
+
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
           role: "system",
@@ -110,23 +136,52 @@ Provide 2-4 snapshots representing different song sections or intensity levels.`
       max_tokens: 2000
     });
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
+    console.log('✅ [AI-SUGGESTIONS] Received response from OpenAI:', {
+      usage: response.usage,
+      finishReason: response.choices[0]?.finish_reason,
+      contentLength: response.choices[0]?.message?.content?.length
+    });
+
+    const rawContent = response.choices[0].message.content || '{}';
+    console.log('🎸 [AI-SUGGESTIONS] Raw OpenAI response content:', rawContent.substring(0, 500) + '...');
+
+    const result = JSON.parse(rawContent);
+    console.log('🎸 [AI-SUGGESTIONS] Parsed JSON result:', {
+      hasReasoning: !!result.reasoning,
+      effectChainLength: result.effectChain?.length || 0,
+      snapshotsLength: result.snapshots?.length || 0,
+      tipsLength: result.tips?.length || 0,
+      effectChainSample: result.effectChain?.slice(0, 2)
+    });
     
     // Validate and map effect names to internal references
     if (result.effectChain) {
-      result.effectChain = result.effectChain.map((effect: any) => {
+      console.log('🎸 [AI-SUGGESTIONS] Validating and mapping effect names...');
+      result.effectChain = result.effectChain.map((effect: any, index: number) => {
+        console.log(`🎸 [AI-SUGGESTIONS] Processing effect ${index}: "${effect.effect}"`);
         const mappedEffect = effectsMapping.find(e => e.friendly === effect.effect);
         if (mappedEffect) {
+          console.log(`✅ [AI-SUGGESTIONS] Successfully mapped "${effect.effect}" to "${mappedEffect.internal}"`);
           return {
             ...effect,
             effect: mappedEffect.internal
           };
         } else {
-          console.warn(`AI suggested invalid effect: "${effect.effect}". Available effects: ${availableEffects.slice(0, 10).join(', ')}...`);
+          console.warn(`❌ [AI-SUGGESTIONS] Invalid effect suggested: "${effect.effect}"`);
+          console.warn(`🎸 [AI-SUGGESTIONS] Closest matches:`, 
+            availableEffects
+              .filter(e => e.toLowerCase().includes(effect.effect.toLowerCase().split(' ')[0]))
+              .slice(0, 5)
+          );
           return null;
         }
       }).filter(Boolean);
     }
+
+    console.log(`🎸 [AI-SUGGESTIONS] Final effect chain after validation:`, {
+      effectCount: result.effectChain?.length || 0,
+      effects: result.effectChain?.map((e: any) => e.effect) || []
+    });
 
     // Additional validation to ensure all suggested effects are valid
     const invalidEffects = result.effectChain?.filter((effect: any) => {
@@ -134,12 +189,26 @@ Provide 2-4 snapshots representing different song sections or intensity levels.`
     });
 
     if (invalidEffects && invalidEffects.length > 0) {
+      console.error('❌ [AI-SUGGESTIONS] Found invalid effects after mapping:', invalidEffects);
       throw new Error(`AI suggested invalid effects: ${invalidEffects.map((e: any) => e.effect).join(', ')}`);
     }
 
+    console.log('✅ [AI-SUGGESTIONS] Successfully generated and validated AI suggestions');
     return result as AISuggestion;
   } catch (error) {
-    console.error('AI suggestion error:', error);
-    throw new Error('Failed to generate AI suggestions');
+    const err = error as Error;
+    console.error('❌ [AI-SUGGESTIONS] Error during generation:', {
+      name: err.name,
+      message: err.message,
+      stack: err.stack?.split('\n').slice(0, 5)
+    });
+    
+    if (err.message?.includes('API key')) {
+      throw new Error('OpenAI API key is invalid or missing');
+    } else if (err.message?.includes('JSON')) {
+      throw new Error('Failed to parse AI response - invalid JSON format');
+    } else {
+      throw new Error(`AI suggestion failed: ${err.message}`);
+    }
   }
 }
