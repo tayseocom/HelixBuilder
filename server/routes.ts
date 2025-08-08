@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertPresetSchema } from "@shared/schema";
 import { z } from "zod";
-import { generateEffectsSuggestions, type SuggestionRequest } from "./ai-suggestions";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -81,51 +80,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete preset" });
-    }
-  });
-
-  // AI Suggestions endpoint
-  app.post("/api/ai-suggestions", async (req, res) => {
-    console.log('🎸 [API] Received AI suggestions request:', {
-      body: req.body,
-      headers: {
-        'content-type': req.headers['content-type'],
-        'user-agent': req.headers['user-agent']
-      }
-    });
-
-    try {
-      const suggestionRequestSchema = z.object({
-        description: z.string().min(1, "Description is required"),
-        artist: z.string().optional(),
-        genre: z.string().optional()
-      });
-
-      console.log('🎸 [API] Validating request data...');
-      const validatedData = suggestionRequestSchema.parse(req.body);
-      console.log('✅ [API] Request data validated successfully');
-
-      console.log('🎸 [API] Calling AI suggestions service...');
-      const suggestions = await generateEffectsSuggestions(validatedData);
-      console.log('✅ [API] AI suggestions generated successfully');
-      
-      res.json(suggestions);
-    } catch (error) {
-      const err = error as Error;
-      if (error instanceof z.ZodError) {
-        console.error('❌ [API] Validation error:', error.errors);
-        res.status(400).json({ message: "Invalid request data", errors: error.errors });
-      } else {
-        console.error('❌ [API] AI suggestions error:', {
-          name: err.name,
-          message: err.message,
-          stack: err.stack?.split('\n').slice(0, 3)
-        });
-        res.status(500).json({ 
-          message: err.message || "Failed to generate AI suggestions",
-          error: err.name
-        });
-      }
     }
   });
 

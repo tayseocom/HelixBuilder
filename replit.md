@@ -4,8 +4,6 @@
 
 This is a React-based web application for generating and managing presets for Line 6 Helix guitar processors. The application allows users to create, edit, and export preset configurations with effect blocks, snapshots, and footswitch assignments. It features a modern UI built with React, TypeScript, and shadcn/ui components, backed by an Express.js server with PostgreSQL database integration.
 
-**NEW: AI-Powered Effects Suggestions** - Users can describe the sound they want to achieve (with optional artist/genre references), and the application uses OpenAI's GPT-4o to suggest complete effects chains, snapshots, and performance tips based on professional guitar tone knowledge.
-
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -45,7 +43,6 @@ Preferred communication style: Simple, everyday language.
 - **Separation of Concerns**: Clear separation between UI components, business logic, and data access
 - **Local Storage Persistence**: Automatic saving of preset state to browser localStorage
 - **File Export/Import**: HLX preset file generation and parsing for hardware compatibility
-- **AI Integration**: OpenAI GPT-4o integration for intelligent effects chain suggestions based on natural language descriptions
 
 ## External Dependencies
 

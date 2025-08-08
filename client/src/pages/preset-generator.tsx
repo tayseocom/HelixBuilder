@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Guitar, Upload, Download, CheckCircle, AlertTriangle, Camera, Layers, Grid3X3, Sparkles } from "lucide-react";
+import { Guitar, Upload, Download, CheckCircle, AlertTriangle, Camera, Layers, Grid3X3 } from "lucide-react";
 import { EffectBlock, Snapshot, Footswitch } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import EffectBlockComponent from "@/components/effect-block";
 import SnapshotSlot from "@/components/snapshot-slot";
 import FootswitchComponent from "@/components/footswitch";
-import AISuggestions from "@/components/ai-suggestions";
 import { exportPresetAsFile, parseHlxFile } from "@/lib/preset-utils";
 
 export default function PresetGenerator() {
@@ -80,11 +78,6 @@ export default function PresetGenerator() {
     const newFootswitches = [...footswitches];
     newFootswitches[index] = footswitch;
     setFootswitches(newFootswitches);
-  };
-
-  const handleApplyAISuggestion = (newEffectBlocks: EffectBlock[], newSnapshots: Snapshot[]) => {
-    setEffectBlocks(newEffectBlocks);
-    setSnapshots(newSnapshots);
   };
 
   const handleExport = () => {
@@ -194,96 +187,77 @@ export default function PresetGenerator() {
           </div>
         </section>
 
-        {/* Main Tabs */}
-        <Tabs defaultValue="manual" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-2 bg-studio-800 border border-studio-700">
-            <TabsTrigger value="manual" className="data-[state=active]:bg-studio-700 text-white">
-              Manual Configuration
-            </TabsTrigger>
-            <TabsTrigger value="ai" className="data-[state=active]:bg-studio-700 text-white">
-              <Sparkles className="w-4 h-4 mr-2" />
-              AI Suggestions
-            </TabsTrigger>
-          </TabsList>
+        {/* Effect Blocks Section */}
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <Layers className="text-green-500 mr-3" />
+            Effect Blocks
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {effectBlocks.map((block, index) => (
+              <EffectBlockComponent
+                key={index}
+                block={block}
+                index={index}
+                onChange={(newBlock) => handleEffectBlockChange(index, newBlock)}
+              />
+            ))}
+          </div>
+        </section>
 
-          <TabsContent value="manual" className="space-y-8">
-            {/* Effect Blocks Section */}
-            <section className="mb-8">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <Layers className="text-green-500 mr-3" />
-                Effect Blocks
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {effectBlocks.map((block, index) => (
-                  <EffectBlockComponent
-                    key={index}
-                    block={block}
-                    index={index}
-                    onChange={(newBlock) => handleEffectBlockChange(index, newBlock)}
-                  />
-                ))}
-              </div>
-            </section>
+        {/* Snapshots Section */}
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <Camera className="text-orange-500 mr-3" />
+            Snapshots
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {snapshots.map((snapshot, index) => (
+              <SnapshotSlot
+                key={index}
+                snapshot={snapshot}
+                index={index}
+                onChange={(newSnapshot) => handleSnapshotChange(index, newSnapshot)}
+              />
+            ))}
+          </div>
+        </section>
 
-            {/* Snapshots Section */}
-            <section className="mb-8">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <Camera className="text-orange-500 mr-3" />
-                Snapshots
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {snapshots.map((snapshot, index) => (
-                  <SnapshotSlot
-                    key={index}
-                    snapshot={snapshot}
-                    index={index}
-                    onChange={(newSnapshot) => handleSnapshotChange(index, newSnapshot)}
-                  />
-                ))}
-              </div>
-            </section>
-
-            {/* Footswitches Section */}
-            <section>
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <Grid3X3 className="text-blue-500 mr-3" />
-                Footswitch Assignments
-              </h2>
-              
-              {/* Top Row */}
-              <div className="grid grid-cols-3 gap-6 mb-6">
-                {footswitches.slice(0, 3).map((footswitch, index) => (
-                  <FootswitchComponent
-                    key={index}
-                    footswitch={footswitch}
-                    index={index}
-                    effectBlocks={effectBlocks}
-                    snapshots={snapshots}
-                    onChange={(newFootswitch) => handleFootswitchChange(index, newFootswitch)}
-                  />
-                ))}
-              </div>
-              
-              {/* Bottom Row */}
-              <div className="grid grid-cols-3 gap-6">
-                {footswitches.slice(3, 6).map((footswitch, index) => (
-                  <FootswitchComponent
-                    key={index + 3}
-                    footswitch={footswitch}
-                    index={index + 3}
-                    effectBlocks={effectBlocks}
-                    snapshots={snapshots}
-                    onChange={(newFootswitch) => handleFootswitchChange(index + 3, newFootswitch)}
-                  />
-                ))}
-              </div>
-            </section>
-          </TabsContent>
-
-          <TabsContent value="ai">
-            <AISuggestions onApplySuggestion={handleApplyAISuggestion} />
-          </TabsContent>
-        </Tabs>
+        {/* Footswitches Section */}
+        <section>
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <Grid3X3 className="text-blue-500 mr-3" />
+            Footswitch Assignments
+          </h2>
+          
+          {/* Top Row */}
+          <div className="grid grid-cols-3 gap-6 mb-6">
+            {footswitches.slice(0, 3).map((footswitch, index) => (
+              <FootswitchComponent
+                key={index}
+                footswitch={footswitch}
+                index={index}
+                effectBlocks={effectBlocks}
+                snapshots={snapshots}
+                onChange={(newFootswitch) => handleFootswitchChange(index, newFootswitch)}
+              />
+            ))}
+          </div>
+          
+          {/* Bottom Row */}
+          <div className="grid grid-cols-3 gap-6">
+            {footswitches.slice(3, 6).map((footswitch, index) => (
+              <FootswitchComponent
+                key={index + 3}
+                footswitch={footswitch}
+                index={index + 3}
+                effectBlocks={effectBlocks}
+                snapshots={snapshots}
+                onChange={(newFootswitch) => handleFootswitchChange(index + 3, newFootswitch)}
+              />
+            ))}
+          </div>
+        </section>
       </main>
     </div>
   );
