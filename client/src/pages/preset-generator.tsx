@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   Guitar,
   Upload,
@@ -9,6 +9,9 @@ import {
   Sliders,
   CheckCircle2,
   AlertCircle,
+  Undo2,
+  Redo2,
+  FilePlus2,
 } from "lucide-react";
 import {
   EffectBlock,
@@ -18,7 +21,19 @@ import {
 } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useHistoryState } from "@/hooks/use-history-state";
 import EffectBlockComponent from "@/components/effect-block";
 import SnapshotSlot from "@/components/snapshot-slot";
 import FootswitchComponent from "@/components/footswitch";
@@ -34,6 +49,14 @@ import {
 } from "@/lib/preset-utils";
 
 const STORAGE_KEY = "hx-preset-generator-v3";
+
+interface EditorState {
+  presetName: string;
+  effectBlocks: EffectBlock[];
+  snapshots: Snapshot[];
+  footswitches: Footswitch[];
+  globalMidi: GlobalMidiSettings;
+}
 
 function defaultBlocks(): EffectBlock[] {
   return Array.from({ length: 9 }, (_, i) => ({
@@ -60,92 +83,129 @@ function defaultFootswitches(): Footswitch[] {
   }));
 }
 
+function defaultEditorState(): EditorState {
+  return {
+    presetName: "New Preset",
+    effectBlocks: defaultBlocks(),
+    snapshots: defaultSnapshots(),
+    footswitches: defaultFootswitches(),
+    globalMidi: emptyGlobalMidi(),
+  };
+}
+
 export default function PresetGenerator() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [presetName, setPresetName] = useState("New Preset");
-  const [effectBlocks, setEffectBlocks] = useState<EffectBlock[]>(defaultBlocks());
-  const [snapshots, setSnapshots] = useState<Snapshot[]>(defaultSnapshots());
-  const [footswitches, setFootswitches] = useState<Footswitch[]>(
-    defaultFootswitches(),
-  );
-  const [globalMidi, setGlobalMidi] = useState<GlobalMidiSettings>(
-    emptyGlobalMidi(),
-  );
-  // The last imported HLX file (raw JSON). Used to preserve unknown fields
-  // (block parameters, controllers, dsp1, etc.) on export.
+  const history = useHistoryState<EditorState>(defaultEditorState());
+  const { state: editor, set: setEditor, reset: resetEditor, undo, redo, canUndo, canRedo } = history;
+
   const [rawHlx, setRawHlx] = useState<any | null>(null);
   const [diffEntries, setDiffEntries] = useState<DiffEntry[] | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetIncludesRaw, setResetIncludesRaw] = useState(false);
+  const hydratedRef = useRef(false);
 
   // Load from localStorage on mount.
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
+    hydratedRef.current = true;
     if (!saved) return;
     try {
       const state = JSON.parse(saved);
-      if (state.presetName) setPresetName(state.presetName);
-      if (Array.isArray(state.effectBlocks))
-        setEffectBlocks(mergeBlocks(state.effectBlocks));
-      if (Array.isArray(state.snapshots))
-        setSnapshots(mergeSnapshots(state.snapshots));
-      if (Array.isArray(state.footswitches))
-        setFootswitches(mergeFootswitches(state.footswitches));
-      if (state.globalMidi)
-        setGlobalMidi({ ...emptyGlobalMidi(), ...state.globalMidi });
+      const next: EditorState = {
+        presetName: state.presetName ?? "New Preset",
+        effectBlocks: Array.isArray(state.effectBlocks)
+          ? mergeBlocks(state.effectBlocks)
+          : defaultBlocks(),
+        snapshots: Array.isArray(state.snapshots)
+          ? mergeSnapshots(state.snapshots)
+          : defaultSnapshots(),
+        footswitches: Array.isArray(state.footswitches)
+          ? mergeFootswitches(state.footswitches)
+          : defaultFootswitches(),
+        globalMidi: state.globalMidi
+          ? { ...emptyGlobalMidi(), ...state.globalMidi }
+          : emptyGlobalMidi(),
+      };
+      resetEditor(next);
       if (state.rawHlx) setRawHlx(state.rawHlx);
     } catch (e) {
       console.error("Failed to load saved state:", e);
     }
-  }, []);
+  }, [resetEditor]);
 
-  // Persist on change.
+  // Persist on change (skip until hydration completes to avoid clobbering).
   useEffect(() => {
+    if (!hydratedRef.current) return;
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        presetName,
-        effectBlocks,
-        snapshots,
-        footswitches,
-        globalMidi,
+        presetName: editor.presetName,
+        effectBlocks: editor.effectBlocks,
+        snapshots: editor.snapshots,
+        footswitches: editor.footswitches,
+        globalMidi: editor.globalMidi,
         rawHlx,
       }),
     );
-  }, [presetName, effectBlocks, snapshots, footswitches, globalMidi, rawHlx]);
+  }, [editor, rawHlx]);
 
   const handleEffectBlockChange = (index: number, block: EffectBlock) => {
-    setEffectBlocks((prev) => {
-      const next = [...prev];
+    setEditor((prev) => {
+      const next = [...prev.effectBlocks];
       next[index] = block;
-      return next;
+      return { ...prev, effectBlocks: next };
     });
   };
 
   const handleSnapshotChange = (index: number, snapshot: Snapshot) => {
-    setSnapshots((prev) => {
-      const next = [...prev];
-      next[index] = snapshot;
-      return next;
-    });
+    const prev = editor.snapshots[index];
+    // A "typing" change is one where only the free-text or numeric-input
+    // fields differ (snapshot name or tempo); toggles, color picks, and
+    // bypass clicks should produce a discrete history entry.
+    const onlyTextual =
+      prev !== undefined &&
+      prev.active === snapshot.active &&
+      prev.ledcolor === snapshot.ledcolor &&
+      arraysEqual(prev.blockBypass, snapshot.blockBypass) &&
+      (prev.name !== snapshot.name || prev.tempo !== snapshot.tempo);
+    setEditor(
+      (p) => {
+        const next = [...p.snapshots];
+        next[index] = snapshot;
+        return { ...p, snapshots: next };
+      },
+      { debounce: onlyTextual },
+    );
   };
 
   const handleFootswitchChange = (index: number, footswitch: Footswitch) => {
-    setFootswitches((prev) => {
-      const next = [...prev];
+    setEditor((prev) => {
+      const next = [...prev.footswitches];
       next[index] = footswitch;
-      return next;
+      return { ...prev, footswitches: next };
     });
+  };
+
+  const handlePresetNameChange = (name: string) => {
+    setEditor((prev) => ({ ...prev, presetName: name }), { debounce: true });
+  };
+
+  const handleGlobalMidiChange = (next: GlobalMidiSettings) => {
+    // GlobalMidiSettings currently only contains `tempo`, which is driven
+    // by a number input — debounce so a typing burst is one undo step.
+    setEditor((prev) => ({ ...prev, globalMidi: next }), { debounce: true });
   };
 
   const handleExport = () => {
     try {
       exportPresetAsFile({
-        name: presetName,
-        effectBlocks,
-        snapshots,
-        footswitches,
-        globalMidi,
+        name: editor.presetName,
+        effectBlocks: editor.effectBlocks,
+        snapshots: editor.snapshots,
+        footswitches: editor.footswitches,
+        globalMidi: editor.globalMidi,
         rawHlx: rawHlx ?? undefined,
       });
       toast({ title: "Exported", description: "Preset saved to your downloads." });
@@ -168,11 +228,13 @@ export default function PresetGenerator() {
     if (!file) return;
     try {
       const { state, raw } = await parseHlxFile(file);
-      setPresetName(state.name);
-      setEffectBlocks(state.effectBlocks);
-      setSnapshots(state.snapshots);
-      setFootswitches(state.footswitches);
-      setGlobalMidi(state.globalMidi);
+      setEditor({
+        presetName: state.name,
+        effectBlocks: state.effectBlocks,
+        snapshots: state.snapshots,
+        footswitches: state.footswitches,
+        globalMidi: state.globalMidi,
+      });
       setRawHlx(raw);
       setDiffEntries(null);
       toast({
@@ -199,32 +261,95 @@ export default function PresetGenerator() {
       return;
     }
     const regenerated = generateHlxPreset({
-      name: presetName,
-      effectBlocks,
-      snapshots,
-      footswitches,
-      globalMidi,
+      name: editor.presetName,
+      effectBlocks: editor.effectBlocks,
+      snapshots: editor.snapshots,
+      footswitches: editor.footswitches,
+      globalMidi: editor.globalMidi,
       rawHlx,
     });
     setDiffEntries(roundTripDiff(rawHlx, regenerated));
   };
 
+  const confirmReset = useCallback(() => {
+    resetEditor(defaultEditorState());
+    if (resetIncludesRaw) {
+      setRawHlx(null);
+      setDiffEntries(null);
+    }
+    setResetOpen(false);
+    setResetIncludesRaw(false);
+    toast({ title: "Reset", description: "Editor state cleared." });
+  }, [resetEditor, resetIncludesRaw, toast]);
+
+  // Keyboard shortcuts: ⌘Z / Ctrl+Z (undo), ⌘⇧Z / Ctrl+Shift+Z / Ctrl+Y (redo).
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+      if (!meta) return;
+      const key = e.key.toLowerCase();
+      if (key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+      } else if (key === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
+
   const activeBlockCount = useMemo(
-    () => effectBlocks.filter((b) => b.enabled && b.effect).length,
-    [effectBlocks],
+    () => editor.effectBlocks.filter((b) => b.enabled && b.effect).length,
+    [editor.effectBlocks],
   );
 
   return (
     <div className="min-h-screen bg-studio-900 text-studio-200">
-      <header className="bg-studio-800 border-b border-studio-700 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <header className="bg-studio-800 border-b border-studio-700 px-4 sm:px-6 py-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center space-x-4">
             <Guitar className="text-blue-500 text-2xl" />
             <h1 className="text-xl font-semibold text-white">
               HX Effects Preset Generator
             </h1>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={undo}
+              disabled={!canUndo}
+              variant="outline"
+              size="icon"
+              title="Undo (⌘Z)"
+              aria-label="Undo"
+              className="bg-studio-700 hover:bg-studio-600 border-studio-600 text-white disabled:opacity-40"
+              data-testid="button-undo"
+            >
+              <Undo2 className="w-4 h-4" />
+            </Button>
+            <Button
+              onClick={redo}
+              disabled={!canRedo}
+              variant="outline"
+              size="icon"
+              title="Redo (⌘⇧Z)"
+              aria-label="Redo"
+              className="bg-studio-700 hover:bg-studio-600 border-studio-600 text-white disabled:opacity-40"
+              data-testid="button-redo"
+            >
+              <Redo2 className="w-4 h-4" />
+            </Button>
+            <Button
+              onClick={() => setResetOpen(true)}
+              variant="outline"
+              className="bg-studio-700 hover:bg-studio-600 border-studio-600 text-white"
+              data-testid="button-reset"
+            >
+              <FilePlus2 className="w-4 h-4 mr-2" />
+              New preset
+            </Button>
             <Button
               onClick={handleImport}
               variant="outline"
@@ -253,15 +378,15 @@ export default function PresetGenerator() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         <section>
           <div className="bg-studio-800 rounded-xl p-6 border border-studio-700">
             <label className="block text-sm font-medium text-studio-300 mb-2">
               Preset Name
             </label>
             <Input
-              value={presetName}
-              onChange={(e) => setPresetName(e.target.value)}
+              value={editor.presetName}
+              onChange={(e) => handlePresetNameChange(e.target.value)}
               placeholder="Enter preset name..."
               className="bg-studio-700 border-studio-600 text-white placeholder-studio-400 focus:border-blue-500"
               data-testid="input-preset-name"
@@ -274,7 +399,7 @@ export default function PresetGenerator() {
             <Sliders className="text-purple-400 mr-3" />
             Global / MIDI Settings
           </h2>
-          <GlobalMidiPanel value={globalMidi} onChange={setGlobalMidi} />
+          <GlobalMidiPanel value={editor.globalMidi} onChange={handleGlobalMidiChange} />
         </section>
 
         <section>
@@ -288,7 +413,7 @@ export default function PresetGenerator() {
             </span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {effectBlocks.map((block, index) => (
+            {editor.effectBlocks.map((block, index) => (
               <EffectBlockComponent
                 key={index}
                 block={block}
@@ -305,12 +430,12 @@ export default function PresetGenerator() {
             Snapshots
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {snapshots.map((snapshot, index) => (
+            {editor.snapshots.map((snapshot, index) => (
               <SnapshotSlot
                 key={index}
                 snapshot={snapshot}
                 index={index}
-                effectBlocks={effectBlocks}
+                effectBlocks={editor.effectBlocks}
                 onChange={(newSnapshot) =>
                   handleSnapshotChange(index, newSnapshot)
                 }
@@ -325,28 +450,15 @@ export default function PresetGenerator() {
             Footswitch Assignments
           </h2>
 
-          <div className="grid grid-cols-3 gap-6 mb-6">
-            {footswitches.slice(0, 3).map((footswitch, index) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
+            {editor.footswitches.map((footswitch, index) => (
               <FootswitchComponent
                 key={index}
                 footswitch={footswitch}
                 index={index}
-                effectBlocks={effectBlocks}
-                snapshots={snapshots}
+                effectBlocks={editor.effectBlocks}
+                snapshots={editor.snapshots}
                 onChange={(nf) => handleFootswitchChange(index, nf)}
-              />
-            ))}
-          </div>
-
-          <div className="grid grid-cols-3 gap-6">
-            {footswitches.slice(3, 6).map((footswitch, index) => (
-              <FootswitchComponent
-                key={index + 3}
-                footswitch={footswitch}
-                index={index + 3}
-                effectBlocks={effectBlocks}
-                snapshots={snapshots}
-                onChange={(nf) => handleFootswitchChange(index + 3, nf)}
               />
             ))}
           </div>
@@ -414,6 +526,55 @@ export default function PresetGenerator() {
           </div>
         </section>
       </main>
+
+      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+        <AlertDialogContent
+          className="bg-studio-800 border-studio-700 text-studio-100"
+          data-testid="dialog-reset"
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              Start a new preset?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-studio-300">
+              This clears the preset name, blocks, snapshots, footswitches, and
+              global MIDI settings. Undo history will also be cleared.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <label className="flex items-start gap-2 text-sm text-studio-200 cursor-pointer">
+            <Checkbox
+              checked={resetIncludesRaw}
+              onCheckedChange={(v) => setResetIncludesRaw(v === true)}
+              disabled={!rawHlx}
+              data-testid="checkbox-reset-raw"
+              className="mt-0.5"
+            />
+            <span>
+              Also drop the imported .hlx reference
+              {!rawHlx && (
+                <span className="block text-xs text-studio-500">
+                  (no file currently imported)
+                </span>
+              )}
+            </span>
+          </label>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="bg-studio-700 border-studio-600 text-white hover:bg-studio-600"
+              data-testid="button-reset-cancel"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmReset}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              data-testid="button-reset-confirm"
+            >
+              Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -474,6 +635,13 @@ function mergeFootswitches(saved: any[]): Footswitch[] {
     base[i] = { assignment, value: f?.value ?? "" };
   });
   return base;
+}
+
+function arraysEqual<T>(a: T[], b: T[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
 }
 
 function padArray<T>(arr: T[], len: number, fill: T): T[] {
