@@ -65,23 +65,27 @@ export const snapshotSchema = z.object({
 
 export type Snapshot = z.infer<typeof snapshotSchema>;
 
-// MIDI command attached to a footswitch (sent in addition to / instead of
-// the local snapshot/effect action).
-export const midiCommandSchema = z.object({
-  type: z.enum(['none', 'pc', 'cc']),
-  channel: z.union([z.literal('base'), z.number().int().min(1).max(16)]).optional(),
+// MIDI parameters used by midi-pc / midi-cc footswitch actions.
+export const midiParamsSchema = z.object({
+  channel: z.union([z.literal('base'), z.number().int().min(1).max(16)]),
   program: z.number().int().min(0).max(127).optional(),
   cc: z.number().int().min(0).max(127).optional(),
   ccValue: z.number().int().min(0).max(127).optional(),
 });
 
-export type MidiCommand = z.infer<typeof midiCommandSchema>;
+export type MidiParams = z.infer<typeof midiParamsSchema>;
 
-// Footswitch Schema
+// Footswitch Schema. A single canonical action per footswitch (matches HLX
+// `commandFSn.@command` semantics — there is one command type per FS).
+//   - off:       no command emitted
+//   - snapshot:  recall snapshot identified by `value`
+//   - effect:    bypass-toggle the block at index `value`
+//   - midi-pc:   send Program Change (program from `midi.program`)
+//   - midi-cc:   send Continuous Controller (cc / ccValue from `midi`)
 export const footswitchSchema = z.object({
-  assignment: z.enum(['off', 'snapshot', 'effect']),
+  assignment: z.enum(['off', 'snapshot', 'effect', 'midi-pc', 'midi-cc']),
   value: z.string(),
-  midi: midiCommandSchema.optional(),
+  midi: midiParamsSchema.optional(),
 });
 
 export type Footswitch = z.infer<typeof footswitchSchema>;

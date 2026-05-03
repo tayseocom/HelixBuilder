@@ -57,7 +57,6 @@ function defaultFootswitches(): Footswitch[] {
   return Array.from({ length: 6 }, () => ({
     assignment: "off" as const,
     value: "",
-    midi: { type: "none" },
   }));
 }
 
@@ -465,11 +464,38 @@ function mergeSnapshots(saved: any[]): Snapshot[] {
 
 function mergeFootswitches(saved: any[]): Footswitch[] {
   const base = defaultFootswitches();
+  const validAssignments = new Set([
+    "off",
+    "snapshot",
+    "effect",
+    "midi-pc",
+    "midi-cc",
+  ]);
   saved.slice(0, 6).forEach((f, i) => {
+    let assignment: Footswitch["assignment"] = validAssignments.has(f?.assignment)
+      ? f.assignment
+      : "off";
+    let midi = f?.midi;
+    // Migrate legacy { type: 'none' | 'pc' | 'cc' } shape.
+    if (midi && typeof midi === "object" && "type" in midi) {
+      if (midi.type === "pc") {
+        assignment = "midi-pc";
+        midi = { channel: midi.channel ?? "base", program: midi.program ?? 0 };
+      } else if (midi.type === "cc") {
+        assignment = "midi-cc";
+        midi = {
+          channel: midi.channel ?? "base",
+          cc: midi.cc ?? 0,
+          ccValue: midi.ccValue ?? 0,
+        };
+      } else {
+        midi = undefined;
+      }
+    }
     base[i] = {
-      assignment: f?.assignment ?? "off",
+      assignment,
       value: f?.value ?? "",
-      midi: f?.midi ?? { type: "none" },
+      ...(midi ? { midi } : {}),
     };
   });
   return base;

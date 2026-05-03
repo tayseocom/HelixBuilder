@@ -15,14 +15,17 @@ interface Props {
   onChange: (next: GlobalMidiSettings) => void;
 }
 
-const DIRECTION_OPTS = [
+type DirectionValue = GlobalMidiSettings["pcRx"]; // 'off' | 'midi' | 'usb' | 'both'
+type RxClockValue = GlobalMidiSettings["rxClock"]; // 'off' | 'midi' | 'usb' | 'auto'
+
+const DIRECTION_OPTS: { v: DirectionValue; label: string }[] = [
   { v: "off", label: "Off" },
   { v: "midi", label: "MIDI" },
   { v: "usb", label: "USB" },
   { v: "both", label: "Both" },
 ];
 
-const RX_CLOCK_OPTS = [
+const RX_CLOCK_OPTS: { v: RxClockValue; label: string }[] = [
   { v: "off", label: "Off" },
   { v: "midi", label: "MIDI" },
   { v: "usb", label: "USB" },
@@ -90,34 +93,34 @@ export default function GlobalMidiPanel({ value, onChange }: Props) {
           </Select>
         </div>
 
-        <DirectionSelect
+        <TypedSelect
           label="MIDI PC Rx"
           value={value.pcRx}
-          onChange={(v) => set("pcRx", v as any)}
+          onChange={(v: DirectionValue) => set("pcRx", v)}
           opts={DIRECTION_OPTS}
           testId="select-global-pc-rx"
         />
 
-        <DirectionSelect
+        <TypedSelect
           label="MIDI PC Tx"
           value={value.pcTx}
-          onChange={(v) => set("pcTx", v as any)}
+          onChange={(v: DirectionValue) => set("pcTx", v)}
           opts={DIRECTION_OPTS}
           testId="select-global-pc-tx"
         />
 
-        <DirectionSelect
+        <TypedSelect
           label="Tx MIDI Clock"
           value={value.txClock}
-          onChange={(v) => set("txClock", v as any)}
+          onChange={(v: DirectionValue) => set("txClock", v)}
           opts={DIRECTION_OPTS}
           testId="select-global-tx-clock"
         />
 
-        <DirectionSelect
+        <TypedSelect
           label="Rx MIDI Clock"
           value={value.rxClock}
-          onChange={(v) => set("rxClock", v as any)}
+          onChange={(v: RxClockValue) => set("rxClock", v)}
           opts={RX_CLOCK_OPTS}
           testId="select-global-rx-clock"
         />
@@ -147,17 +150,18 @@ export default function GlobalMidiPanel({ value, onChange }: Props) {
       <div className="flex items-start gap-2 text-xs text-studio-400 bg-studio-900 border border-studio-700 rounded px-3 py-2">
         <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
         <span>
-          Only Preset Tempo is stored in the .hlx file. The other settings
-          live in your HX Effects' Global Settings on the device — these
-          fields document what to set there so this preset behaves as
-          expected.
+          Preset Tempo writes to the standard HX field. The other fields are
+          device globals on the HX Effects — they are also persisted into the
+          preset (under <code>data.tone.global.@_hxgen_global_midi</code>) so
+          they survive round-trip and document the device settings this preset
+          expects.
         </span>
       </div>
     </div>
   );
 }
 
-function DirectionSelect({
+function TypedSelect<T extends string>({
   label,
   value,
   onChange,
@@ -165,15 +169,15 @@ function DirectionSelect({
   testId,
 }: {
   label: string;
-  value: string;
-  onChange: (v: string) => void;
-  opts: { v: string; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  opts: { v: T; label: string }[];
   testId: string;
 }) {
   return (
     <div>
       <label className="block text-xs text-studio-400 mb-1">{label}</label>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value} onValueChange={(v) => onChange(v as T)}>
         <SelectTrigger
           className="bg-studio-700 border-studio-600 text-white"
           data-testid={testId}

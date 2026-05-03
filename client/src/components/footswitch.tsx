@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Footswitch, EffectBlock, Snapshot, MidiCommand } from "@shared/schema";
+import { Footswitch, EffectBlock, Snapshot, MidiParams } from "@shared/schema";
 import { effectsMapping } from "@/lib/effects-mapping";
 import {
   Select,
@@ -11,6 +11,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Power, AlertTriangle } from "lucide-react";
 import { isReservedCc, reservedCcDescription } from "@/lib/midi-constants";
+import { useToast } from "@/hooks/use-toast";
+
+type Assignment = Footswitch["assignment"];
 
 interface FootswitchProps {
   footswitch: Footswitch;
@@ -20,6 +23,21 @@ interface FootswitchProps {
   onChange: (footswitch: Footswitch) => void;
 }
 
+function nextNonReservedCc(start: number, dir: 1 | -1 = 1): number {
+  let n = start;
+  for (let i = 0; i < 200; i++) {
+    if (n < 0) n = 0;
+    if (n > 127) n = 127;
+    if (!isReservedCc(n)) return n;
+    n += dir;
+    if (n < 0 || n > 127) {
+      n = start;
+      dir = (dir === 1 ? -1 : 1) as 1 | -1;
+    }
+  }
+  return 3;
+}
+
 export default function FootswitchComponent({
   footswitch,
   index,
@@ -27,6 +45,8 @@ export default function FootswitchComponent({
   snapshots,
   onChange,
 }: FootswitchProps) {
+  const { toast } = useToast();
+
   const activeEffectBlocks = useMemo(
     () =>
       effectBlocks
@@ -42,41 +62,40 @@ export default function FootswitchComponent({
     [snapshots],
   );
 
-  const midi: MidiCommand = footswitch.midi ?? { type: "none" };
+  const midi: MidiParams = footswitch.midi ?? { channel: "base" };
 
-  const handleAssignmentChange = (assignment: "off" | "snapshot" | "effect") => {
-    onChange({ ...footswitch, assignment, value: "" });
-  };
-
-  const handleValueChange = (value: string) => {
-    onChange({ ...footswitch, value });
-  };
-
-  const handleMidiTypeChange = (type: "none" | "pc" | "cc") => {
-    if (type === "none") {
-      onChange({ ...footswitch, midi: { type: "none" } });
+  const handleAssignmentChange = (assignment: Assignment) => {
+    if (assignment === "off" || assignment === "snapshot" || assignment === "effect") {
+      onChange({ assignment, value: "" });
       return;
     }
-    if (type === "pc") {
+    if (assignment === "midi-pc") {
       onChange({
-        ...footswitch,
+        assignment,
+        value: "",
         midi: {
-          type: "pc",
-          channel: midi.channel ?? "base",
+          channel: midi.channel,
           program: midi.program ?? 0,
         },
       });
       return;
     }
+    // midi-cc
+    const startCc = midi.cc ?? 3;
+    const safeCc = isReservedCc(startCc) ? nextNonReservedCc(startCc) : startCc;
     onChange({
-      ...footswitch,
+      assignment,
+      value: "",
       midi: {
-        type: "cc",
-        channel: midi.channel ?? "base",
-        cc: midi.cc ?? 3,
+        channel: midi.channel,
+        cc: safeCc,
         ccValue: midi.ccValue ?? 127,
       },
     });
+  };
+
+  const handleValueChange = (value: string) => {
+    onChange({ ...footswitch, value });
   };
 
   const handleChannelChange = (raw: string) => {
@@ -91,10 +110,19 @@ export default function FootswitchComponent({
   ) => {
     const n = parseInt(raw, 10);
     if (!Number.isFinite(n)) return;
-    onChange({
-      ...footswitch,
-      midi: { ...midi, [field]: Math.max(0, Math.min(127, n)) },
-    });
+    const clamped = Math.max(0, Math.min(127, n));
+
+    if (field === "cc" && isReservedCc(clamped)) {
+      toast({
+        title: "Reserved MIDI CC",
+        description: `CC ${clamped} is reserved on HX Effects (${reservedCcDescription(
+          clamped,
+        )}). Choose a different CC number.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    onChange({ ...footswitch, midi: { ...midi, [field]: clamped } });
   };
 
   const getEffectName = (internalRef: string) => {
@@ -103,38 +131,47 @@ export default function FootswitchComponent({
   };
 
   const getPedalColor = () => {
-    if (footswitch.assignment === "off" && midi.type === "none")
-      return "border-studio-600 bg-gradient-to-b from-studio-700 to-studio-800";
-    if (footswitch.assignment === "snapshot" && footswitch.value)
-      return "border-green-500 bg-gradient-to-b from-green-700 to-green-800";
-    if (footswitch.assignment === "effect" && footswitch.value)
-      return "border-orange-500 bg-gradient-to-b from-orange-700 to-orange-800";
-    if (midi.type !== "none")
-      return "border-purple-500 bg-gradient-to-b from-purple-700 to-purple-800";
-    return "border-blue-500 bg-gradient-to-b from-blue-700 to-blue-800";
+    switch (footswitch.assignment) {
+      case "off":
+        return "border-studio-600 bg-gradient-to-b from-studio-700 to-studio-800";
+      case "snapshot":
+        return footswitch.value
+          ? "border-green-500 bg-gradient-to-b from-green-700 to-green-800"
+          : "border-yellow-500 bg-gradient-to-b from-yellow-700 to-yellow-800";
+      case "effect":
+        return footswitch.value
+          ? "border-orange-500 bg-gradient-to-b from-orange-700 to-orange-800"
+          : "border-yellow-500 bg-gradient-to-b from-yellow-700 to-yellow-800";
+      case "midi-pc":
+      case "midi-cc":
+        return "border-purple-500 bg-gradient-to-b from-purple-700 to-purple-800";
+    }
   };
 
   const getStatusText = () => {
-    const parts: string[] = [];
-    if (footswitch.assignment === "snapshot" && footswitch.value !== "") {
-      const snapIdx = parseInt(footswitch.value, 10);
-      parts.push(`Snap: ${snapshots[snapIdx]?.name || `#${snapIdx + 1}`}`);
-    } else if (footswitch.assignment === "effect" && footswitch.value !== "") {
-      const blockIdx = parseInt(footswitch.value, 10);
-      const eff = effectBlocks[blockIdx];
-      parts.push(`Effect: ${eff ? getEffectName(eff.effect) : `Block ${blockIdx}`}`);
-    } else if (footswitch.assignment !== "off") {
-      parts.push("Incomplete");
+    switch (footswitch.assignment) {
+      case "off":
+        return "Unassigned";
+      case "snapshot": {
+        if (footswitch.value === "") return "Pick a snapshot";
+        const i = parseInt(footswitch.value, 10);
+        return `Snap: ${snapshots[i]?.name || `#${i + 1}`}`;
+      }
+      case "effect": {
+        if (footswitch.value === "") return "Pick a block";
+        const i = parseInt(footswitch.value, 10);
+        const eff = effectBlocks[i];
+        return `Effect: ${eff ? getEffectName(eff.effect) : `Block ${i}`}`;
+      }
+      case "midi-pc":
+        return `PC ${midi.program ?? 0} · ch ${midi.channel}`;
+      case "midi-cc":
+        return `CC ${midi.cc ?? 0}=${midi.ccValue ?? 0} · ch ${midi.channel}`;
     }
-    if (midi.type === "pc") parts.push(`PC ${midi.program ?? 0}`);
-    if (midi.type === "cc")
-      parts.push(`CC ${midi.cc ?? 0}=${midi.ccValue ?? 0}`);
-    return parts.length ? parts.join(" · ") : "Unassigned";
   };
 
   const getStatusColor = () => {
-    if (footswitch.assignment === "off" && midi.type === "none")
-      return "text-studio-400";
+    if (footswitch.assignment === "off") return "text-studio-400";
     if (
       (footswitch.assignment === "snapshot" || footswitch.assignment === "effect") &&
       footswitch.value === ""
@@ -144,7 +181,9 @@ export default function FootswitchComponent({
   };
 
   const ccReserved =
-    midi.type === "cc" && midi.cc !== undefined && isReservedCc(midi.cc);
+    footswitch.assignment === "midi-cc" &&
+    midi.cc !== undefined &&
+    isReservedCc(midi.cc);
 
   return (
     <div className="bg-studio-800 rounded-xl p-5 border-2 border-studio-700 hover:border-studio-600 transition-colors">
@@ -162,11 +201,11 @@ export default function FootswitchComponent({
       <div className="space-y-2">
         <div>
           <div className="text-[10px] uppercase tracking-wide text-studio-400 mb-1">
-            Local action
+            Action
           </div>
           <Select
             value={footswitch.assignment}
-            onValueChange={handleAssignmentChange}
+            onValueChange={(v) => handleAssignmentChange(v as Assignment)}
           >
             <SelectTrigger
               className="w-full bg-studio-700 border-studio-600 text-white text-sm focus:border-blue-500 h-8"
@@ -182,13 +221,25 @@ export default function FootswitchComponent({
                 value="snapshot"
                 className="text-white hover:bg-studio-600"
               >
-                Snapshot
+                Recall Snapshot
               </SelectItem>
               <SelectItem
                 value="effect"
                 className="text-white hover:bg-studio-600"
               >
-                Effect
+                Toggle Effect
+              </SelectItem>
+              <SelectItem
+                value="midi-pc"
+                className="text-white hover:bg-studio-600"
+              >
+                MIDI Program Change
+              </SelectItem>
+              <SelectItem
+                value="midi-cc"
+                className="text-white hover:bg-studio-600"
+              >
+                MIDI CC
               </SelectItem>
             </SelectContent>
           </Select>
@@ -248,38 +299,14 @@ export default function FootswitchComponent({
           </Select>
         )}
 
-        <div className="pt-2 border-t border-studio-700">
-          <div className="text-[10px] uppercase tracking-wide text-studio-400 mb-1">
-            MIDI out
-          </div>
-          <Select value={midi.type} onValueChange={handleMidiTypeChange}>
-            <SelectTrigger
-              className="w-full bg-studio-700 border-studio-600 text-white text-sm h-8"
-              data-testid={`select-fs-${index}-midi-type`}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-studio-700 border-studio-600">
-              <SelectItem value="none" className="text-white hover:bg-studio-600">
-                No MIDI
-              </SelectItem>
-              <SelectItem value="pc" className="text-white hover:bg-studio-600">
-                Program Change
-              </SelectItem>
-              <SelectItem value="cc" className="text-white hover:bg-studio-600">
-                Continuous Controller
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {midi.type !== "none" && (
+        {(footswitch.assignment === "midi-pc" ||
+          footswitch.assignment === "midi-cc") && (
           <div className="space-y-1.5">
             <div className="flex gap-1.5">
               <div className="flex-1">
                 <label className="text-[10px] text-studio-400 block">Ch</label>
                 <Select
-                  value={String(midi.channel ?? "base")}
+                  value={String(midi.channel)}
                   onValueChange={handleChannelChange}
                 >
                   <SelectTrigger
@@ -308,7 +335,7 @@ export default function FootswitchComponent({
                 </Select>
               </div>
 
-              {midi.type === "pc" && (
+              {footswitch.assignment === "midi-pc" ? (
                 <div className="flex-1">
                   <label className="text-[10px] text-studio-400 block">PC#</label>
                   <Input
@@ -321,9 +348,7 @@ export default function FootswitchComponent({
                     data-testid={`input-fs-${index}-midi-pc`}
                   />
                 </div>
-              )}
-
-              {midi.type === "cc" && (
+              ) : (
                 <>
                   <div className="flex-1">
                     <label className="text-[10px] text-studio-400 block">CC#</label>
@@ -333,7 +358,9 @@ export default function FootswitchComponent({
                       max={127}
                       value={midi.cc ?? 0}
                       onChange={(e) => handleNumChange("cc", e.target.value)}
-                      className="h-7 text-xs bg-studio-700 border-studio-600 text-white"
+                      className={`h-7 text-xs bg-studio-700 border-studio-600 text-white ${
+                        ccReserved ? "border-red-500" : ""
+                      }`}
                       data-testid={`input-fs-${index}-midi-cc`}
                     />
                   </div>
@@ -360,7 +387,8 @@ export default function FootswitchComponent({
               >
                 <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                 <span>
-                  CC {midi.cc} is reserved on HX Effects ({reservedCcDescription(midi.cc!)}). Pick a different CC number.
+                  CC {midi.cc} is reserved on HX Effects (
+                  {reservedCcDescription(midi.cc!)}). Pick a different CC number.
                 </span>
               </div>
             )}

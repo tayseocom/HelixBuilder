@@ -6,7 +6,14 @@ import {
 } from "@shared/schema";
 import { baseHlxTemplate } from "./hlx-template";
 import { effectsMapping } from "./effects-mapping";
-import { DEFAULT_GLOBAL_MIDI } from "./midi-constants";
+import { DEFAULT_GLOBAL_MIDI, isReservedCc } from "./midi-constants";
+
+/** Key under `data.tone.global` where we persist the Global MIDI panel
+ * settings. HX firmware stores these as device globals, not in preset
+ * files, so we write them under our own namespace where they survive
+ * round-trip and document intent. The well-known `@tempo` field is also
+ * written to `data.tone.global` for HX compatibility. */
+const GLOBAL_MIDI_KEY = "@_hxgen_global_midi";
 
 export interface PresetData {
   name: string;
@@ -50,28 +57,12 @@ function emptyFootswitches(): Footswitch[] {
   return Array.from({ length: NUM_FOOTSWITCHES }, () => ({
     assignment: "off" as const,
     value: "",
-    midi: { type: "none" },
   }));
 }
 
 export function emptyGlobalMidi(): GlobalMidiSettings {
   return { ...DEFAULT_GLOBAL_MIDI };
 }
-
-/** A bag of well-known top-level keys we manage. Anything else under
- * `data.tone` is preserved verbatim from the raw import. */
-const MANAGED_TONE_KEYS = new Set<string>([
-  "snapshot0",
-  "snapshot1",
-  "snapshot2",
-  "snapshot3",
-  "commandFS1",
-  "commandFS2",
-  "commandFS3",
-  "commandFS4",
-  "commandFS5",
-  "commandFS6",
-]);
 
 /**
  * Build an HLX preset object from the editor state.
@@ -94,8 +85,22 @@ export const generateHlxPreset = (data: PresetData): any => {
   preset.data.meta.name = data.name;
   preset.data.meta.modifieddate = Math.floor(Date.now() / 1000);
 
-  // Global tempo (the only Global Settings field that lives in preset files).
+  // Global / MIDI settings. `@tempo` is a known HX field; the rest are
+  // device globals that HX firmware does not read from a preset file, so we
+  // also persist the full panel under our own namespaced key for round-trip
+  // and as documentation embedded in the preset itself.
   preset.data.tone.global["@tempo"] = data.globalMidi.tempo;
+  preset.data.tone.global[GLOBAL_MIDI_KEY] = {
+    baseChannel: data.globalMidi.baseChannel,
+    midiThru: data.globalMidi.midiThru,
+    usbMidi: data.globalMidi.usbMidi,
+    pcRx: data.globalMidi.pcRx,
+    pcTx: data.globalMidi.pcTx,
+    snapshotCcSend: data.globalMidi.snapshotCcSend,
+    txClock: data.globalMidi.txClock,
+    rxClock: data.globalMidi.rxClock,
+    tempo: data.globalMidi.tempo,
+  };
 
   // ---- Effect blocks ----
   const dsp0 = preset.data.tone.dsp0;
@@ -188,7 +193,6 @@ export const generateHlxPreset = (data: PresetData): any => {
  * original payload verbatim on export. */
 function footswitchMatchesOriginal(fs: Footswitch, original: any): boolean {
   if (!original || typeof original !== "object") return false;
-  if (fs.midi && fs.midi.type !== "none") return false;
 
   const cmd = original["@command"];
   const press = original["@press"];
@@ -203,9 +207,28 @@ function footswitchMatchesOriginal(fs: Footswitch, original: any): boolean {
     if (typeof press !== "number") return false;
     return String(press) === fs.value;
   }
-  // assignment === "off": only matches if the original was effectively unused
-  // (snapshot/bypass commands count as "still assigned").
-  return cmd !== COMMAND_HX_SNAPSHOT && cmd !== COMMAND_BLOCK_BYPASS;
+  if (fs.assignment === "midi-pc") {
+    if (cmd !== COMMAND_MIDI_PC) return false;
+    return (
+      original["@_hxgen_program"] === (fs.midi?.program ?? 0) &&
+      original["@_hxgen_channel"] === (fs.midi?.channel ?? "base")
+    );
+  }
+  if (fs.assignment === "midi-cc") {
+    if (cmd !== COMMAND_MIDI_CC) return false;
+    return (
+      original["@_hxgen_cc"] === (fs.midi?.cc ?? 0) &&
+      original["@_hxgen_cc_value"] === (fs.midi?.ccValue ?? 0) &&
+      original["@_hxgen_channel"] === (fs.midi?.channel ?? "base")
+    );
+  }
+  // assignment === "off": only matches if the original was effectively unused.
+  return (
+    cmd !== COMMAND_HX_SNAPSHOT &&
+    cmd !== COMMAND_BLOCK_BYPASS &&
+    cmd !== COMMAND_MIDI_PC &&
+    cmd !== COMMAND_MIDI_CC
+  );
 }
 
 function buildSnapshotCommandStubs(
@@ -213,7 +236,7 @@ function buildSnapshotCommandStubs(
 ): Record<string, any> {
   const out: Record<string, any> = {};
   footswitches.forEach((fs, idx) => {
-    if (fs.assignment === "off" && fs.midi?.type === "none") return;
+    if (fs.assignment === "off") return;
     out[`commandFS${idx + 1}`] = {
       "@relhold": 0,
       "@press": idx + 3,
@@ -226,7 +249,7 @@ function buildSnapshotCommandStubs(
 
 function buildFootswitchCommand(
   fs: Footswitch,
-  idx: number,
+  _idx: number,
   data: PresetData,
 ): any | null {
   const base = {
@@ -237,49 +260,6 @@ function buildFootswitchCommand(
     "@fs_ledcolor": DEFAULT_FS_LEDCOLOR,
     "@fs_momentary": true,
   };
-
-  const midi = fs.midi;
-  const hasMidi = midi && midi.type !== "none";
-
-  // MIDI command takes priority if configured.
-  if (hasMidi) {
-    if (midi!.type === "pc") {
-      return {
-        ...base,
-        "@command": COMMAND_MIDI_PC,
-        "@press": midi!.program ?? 0,
-        "@midi_channel": midi!.channel ?? "base",
-        "@fs_label": `PC ${midi!.program ?? 0}`,
-        "@_hxgen_kind": "midi-pc",
-        "@_hxgen_program": midi!.program ?? 0,
-        "@_hxgen_channel": midi!.channel ?? "base",
-        ...(fs.assignment === "snapshot" && fs.value !== ""
-          ? { "@_hxgen_local": "snapshot", "@_hxgen_index": Number(fs.value) }
-          : fs.assignment === "effect" && fs.value !== ""
-          ? { "@_hxgen_local": "effect", "@_hxgen_index": Number(fs.value) }
-          : {}),
-      };
-    }
-    if (midi!.type === "cc") {
-      return {
-        ...base,
-        "@command": COMMAND_MIDI_CC,
-        "@press": midi!.ccValue ?? 0,
-        "@midi_channel": midi!.channel ?? "base",
-        "@midi_cc": midi!.cc ?? 0,
-        "@fs_label": `CC ${midi!.cc ?? 0}`,
-        "@_hxgen_kind": "midi-cc",
-        "@_hxgen_cc": midi!.cc ?? 0,
-        "@_hxgen_cc_value": midi!.ccValue ?? 0,
-        "@_hxgen_channel": midi!.channel ?? "base",
-        ...(fs.assignment === "snapshot" && fs.value !== ""
-          ? { "@_hxgen_local": "snapshot", "@_hxgen_index": Number(fs.value) }
-          : fs.assignment === "effect" && fs.value !== ""
-          ? { "@_hxgen_local": "effect", "@_hxgen_index": Number(fs.value) }
-          : {}),
-      };
-    }
-  }
 
   if (fs.assignment === "snapshot" && fs.value !== "") {
     const snapIdx = Number(fs.value);
@@ -307,6 +287,43 @@ function buildFootswitchCommand(
       "@fs_label": effName.slice(0, 16),
       "@_hxgen_kind": "effect",
       "@_hxgen_index": blockIdx,
+    };
+  }
+
+  if (fs.assignment === "midi-pc") {
+    const program = fs.midi?.program ?? 0;
+    const channel = fs.midi?.channel ?? "base";
+    return {
+      ...base,
+      "@command": COMMAND_MIDI_PC,
+      "@press": program,
+      "@midi_channel": channel,
+      "@fs_label": `PC ${program}`,
+      "@_hxgen_kind": "midi-pc",
+      "@_hxgen_program": program,
+      "@_hxgen_channel": channel,
+    };
+  }
+
+  if (fs.assignment === "midi-cc") {
+    const cc = fs.midi?.cc ?? 0;
+    const ccValue = fs.midi?.ccValue ?? 0;
+    const channel = fs.midi?.channel ?? "base";
+    if (isReservedCc(cc)) {
+      // Defensive: refuse to export reserved CCs even if state was forced.
+      return null;
+    }
+    return {
+      ...base,
+      "@command": COMMAND_MIDI_CC,
+      "@press": ccValue,
+      "@midi_channel": channel,
+      "@midi_cc": cc,
+      "@fs_label": `CC ${cc}`,
+      "@_hxgen_kind": "midi-cc",
+      "@_hxgen_cc": cc,
+      "@_hxgen_cc_value": ccValue,
+      "@_hxgen_channel": channel,
     };
   }
 
@@ -393,7 +410,6 @@ export function deriveStateFromHlx(preset: any): {
       footswitches[i] = {
         assignment: "snapshot",
         value: String(raw["@_hxgen_index"] ?? ""),
-        midi: { type: "none" },
       };
       continue;
     }
@@ -401,24 +417,14 @@ export function deriveStateFromHlx(preset: any): {
       footswitches[i] = {
         assignment: "effect",
         value: String(raw["@_hxgen_index"] ?? ""),
-        midi: { type: "none" },
       };
       continue;
     }
     if (kind === "midi-pc") {
       footswitches[i] = {
-        assignment:
-          raw["@_hxgen_local"] === "snapshot"
-            ? "snapshot"
-            : raw["@_hxgen_local"] === "effect"
-            ? "effect"
-            : "off",
-        value:
-          raw["@_hxgen_local"] && raw["@_hxgen_index"] !== undefined
-            ? String(raw["@_hxgen_index"])
-            : "",
+        assignment: "midi-pc",
+        value: "",
         midi: {
-          type: "pc",
           channel: raw["@_hxgen_channel"] ?? "base",
           program: raw["@_hxgen_program"] ?? 0,
         },
@@ -427,18 +433,9 @@ export function deriveStateFromHlx(preset: any): {
     }
     if (kind === "midi-cc") {
       footswitches[i] = {
-        assignment:
-          raw["@_hxgen_local"] === "snapshot"
-            ? "snapshot"
-            : raw["@_hxgen_local"] === "effect"
-            ? "effect"
-            : "off",
-        value:
-          raw["@_hxgen_local"] && raw["@_hxgen_index"] !== undefined
-            ? String(raw["@_hxgen_index"])
-            : "",
+        assignment: "midi-cc",
+        value: "",
         midi: {
-          type: "cc",
           channel: raw["@_hxgen_channel"] ?? "base",
           cc: raw["@_hxgen_cc"] ?? 0,
           ccValue: raw["@_hxgen_cc_value"] ?? 0,
@@ -452,27 +449,46 @@ export function deriveStateFromHlx(preset: any): {
     if (cmd === COMMAND_HX_SNAPSHOT) {
       const press = typeof raw["@press"] === "number" ? raw["@press"] : 3;
       const snapIdx = Math.max(0, Math.min(NUM_SNAPSHOTS - 1, press - 3));
-      footswitches[i] = {
-        assignment: "snapshot",
-        value: String(snapIdx),
-        midi: { type: "none" },
-      };
+      footswitches[i] = { assignment: "snapshot", value: String(snapIdx) };
     } else if (cmd === COMMAND_BLOCK_BYPASS) {
       const press = typeof raw["@press"] === "number" ? raw["@press"] : 0;
+      footswitches[i] = { assignment: "effect", value: String(press) };
+    } else if (cmd === COMMAND_MIDI_PC) {
       footswitches[i] = {
-        assignment: "effect",
-        value: String(press),
-        midi: { type: "none" },
+        assignment: "midi-pc",
+        value: "",
+        midi: {
+          channel: raw["@midi_channel"] ?? "base",
+          program: typeof raw["@press"] === "number" ? raw["@press"] : 0,
+        },
+      };
+    } else if (cmd === COMMAND_MIDI_CC) {
+      footswitches[i] = {
+        assignment: "midi-cc",
+        value: "",
+        midi: {
+          channel: raw["@midi_channel"] ?? "base",
+          cc: typeof raw["@midi_cc"] === "number" ? raw["@midi_cc"] : 0,
+          ccValue: typeof raw["@press"] === "number" ? raw["@press"] : 0,
+        },
       };
     }
   }
 
+  // Global MIDI: prefer our persisted bag, then `@tempo`, then defaults.
+  const persistedGlobal = tone?.global?.[GLOBAL_MIDI_KEY];
   const globalMidi: GlobalMidiSettings = {
     ...DEFAULT_GLOBAL_MIDI,
+    ...(persistedGlobal && typeof persistedGlobal === "object"
+      ? persistedGlobal
+      : {}),
     tempo:
-      typeof tone?.global?.["@tempo"] === "number"
+      (persistedGlobal && typeof persistedGlobal.tempo === "number"
+        ? persistedGlobal.tempo
+        : undefined) ??
+      (typeof tone?.global?.["@tempo"] === "number"
         ? tone.global["@tempo"]
-        : DEFAULT_GLOBAL_MIDI.tempo,
+        : DEFAULT_GLOBAL_MIDI.tempo),
   };
 
   return { name, effectBlocks, snapshots, footswitches, globalMidi };
@@ -506,7 +522,8 @@ export interface DiffEntry {
 
 const IGNORE_KEYS = new Set([
   "modifieddate",
-  // Hidden round-trip hints we add on export but the source file won't have.
+  // Hidden round-trip hints / namespaced keys we add on export but
+  // the source file won't have.
   "@_hxgen_kind",
   "@_hxgen_index",
   "@_hxgen_local",
@@ -514,6 +531,7 @@ const IGNORE_KEYS = new Set([
   "@_hxgen_cc",
   "@_hxgen_cc_value",
   "@_hxgen_channel",
+  GLOBAL_MIDI_KEY,
 ]);
 
 function isObject(v: any): v is Record<string, any> {
