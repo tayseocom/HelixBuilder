@@ -288,6 +288,21 @@ export default function PresetGenerator() {
       const meta = e.metaKey || e.ctrlKey;
       if (!meta) return;
       const key = e.key.toLowerCase();
+      if (key !== "z" && key !== "y") return;
+      // Bail out if a modal/dialog is open — let the dialog own keyboard focus.
+      if (typeof document !== "undefined") {
+        if (document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')) {
+          return;
+        }
+        // Let native undo/redo work inside text inputs and contenteditable surfaces.
+        const target = e.target as HTMLElement | null;
+        if (target) {
+          const tag = target.tagName;
+          if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable) {
+            return;
+          }
+        }
+      }
       if (key === "z") {
         e.preventDefault();
         if (e.shiftKey) redo();
