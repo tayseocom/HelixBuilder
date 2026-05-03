@@ -39,30 +39,70 @@ export type User = typeof users.$inferSelect;
 export type InsertPreset = z.infer<typeof insertPresetSchema>;
 export type Preset = typeof presets.$inferSelect;
 
-// Effect Block Schema
+// Effect Block Schema. `params` preserves model-specific parameter values
+// (Tone, Mix, Time, Sustain, ...) verbatim from imported files.
 export const effectBlockSchema = z.object({
   enabled: z.boolean(),
   effect: z.string(),
   position: z.number(),
+  params: z.record(z.any()).optional(),
 });
 
 export type EffectBlock = z.infer<typeof effectBlockSchema>;
 
-// Snapshot Schema
+// Snapshot Schema. Each snapshot stores per-block bypass states so the four
+// snapshots can have independent footswitch/effect configurations. `rawCommands`
+// and `rawControllers` preserve unknown structures from imported files.
 export const snapshotSchema = z.object({
   name: z.string(),
   active: z.boolean(),
+  ledcolor: z.number().optional(),
+  tempo: z.number().optional(),
+  blockBypass: z.array(z.boolean()).optional(),
+  rawCommands: z.any().optional(),
+  rawControllers: z.any().optional(),
 });
 
 export type Snapshot = z.infer<typeof snapshotSchema>;
+
+// MIDI command attached to a footswitch (sent in addition to / instead of
+// the local snapshot/effect action).
+export const midiCommandSchema = z.object({
+  type: z.enum(['none', 'pc', 'cc']),
+  channel: z.union([z.literal('base'), z.number().int().min(1).max(16)]).optional(),
+  program: z.number().int().min(0).max(127).optional(),
+  cc: z.number().int().min(0).max(127).optional(),
+  ccValue: z.number().int().min(0).max(127).optional(),
+});
+
+export type MidiCommand = z.infer<typeof midiCommandSchema>;
 
 // Footswitch Schema
 export const footswitchSchema = z.object({
   assignment: z.enum(['off', 'snapshot', 'effect']),
   value: z.string(),
+  midi: midiCommandSchema.optional(),
 });
 
 export type Footswitch = z.infer<typeof footswitchSchema>;
+
+// Global MIDI / tempo settings.
+// Only `tempo` is actually written into the preset file (preset `global.@tempo`).
+// The other fields are device-level globals on the HX hardware and are kept
+// in the UI for completeness but are not part of `.hlx` preset payloads.
+export const globalMidiSchema = z.object({
+  baseChannel: z.number().int().min(1).max(16),
+  midiThru: z.boolean(),
+  usbMidi: z.boolean(),
+  pcRx: z.enum(['off', 'midi', 'usb', 'both']),
+  pcTx: z.enum(['off', 'midi', 'usb', 'both']),
+  snapshotCcSend: z.boolean(),
+  txClock: z.enum(['off', 'midi', 'usb', 'both']),
+  rxClock: z.enum(['off', 'midi', 'usb', 'auto']),
+  tempo: z.number(),
+});
+
+export type GlobalMidiSettings = z.infer<typeof globalMidiSchema>;
 
 // Effect Mapping Schema
 export const effectMappingSchema = z.object({
