@@ -1,5 +1,11 @@
-import { useMemo } from "react";
-import { Footswitch, EffectBlock, Snapshot, MidiParams } from "@shared/schema";
+import { useMemo, useState } from "react";
+import {
+  Footswitch,
+  EffectBlock,
+  Snapshot,
+  MidiParams,
+  InstantCommand,
+} from "@shared/schema";
 import { effectsMapping } from "@/lib/effects-mapping";
 import {
   Select,
@@ -9,7 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Power, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Power,
+  AlertTriangle,
+  Plus,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { isReservedCc, reservedCcDescription } from "@/lib/midi-constants";
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,6 +60,65 @@ export default function FootswitchComponent({
   onChange,
 }: FootswitchProps) {
   const { toast } = useToast();
+  const [instantsOpen, setInstantsOpen] = useState(
+    !!(footswitch.instantCommands && footswitch.instantCommands.length > 0),
+  );
+
+  const instantCommands = footswitch.instantCommands ?? [];
+
+  const setInstantCommands = (next: InstantCommand[]) => {
+    if (next.length === 0) {
+      const { instantCommands: _drop, ...rest } = footswitch;
+      onChange(rest);
+    } else {
+      onChange({ ...footswitch, instantCommands: next });
+    }
+  };
+
+  const addInstantCommand = (type: "pc" | "cc") => {
+    const next: InstantCommand =
+      type === "pc"
+        ? { type: "pc", channel: "base", program: 0 }
+        : { type: "cc", channel: "base", cc: nextNonReservedCc(3), ccValue: 127 };
+    setInstantCommands([...instantCommands, next]);
+    setInstantsOpen(true);
+  };
+
+  const updateInstantCommand = (i: number, patch: Partial<InstantCommand>) => {
+    if (
+      patch.type === "cc" || patch.cc !== undefined
+    ) {
+      // value-level reserved-CC guard handled in handleInstantCcChange below
+    }
+    setInstantCommands(
+      instantCommands.map((c, idx) => (idx === i ? ({ ...c, ...patch } as InstantCommand) : c)),
+    );
+  };
+
+  const handleInstantNumChange = (
+    i: number,
+    field: "program" | "cc" | "ccValue",
+    raw: string,
+  ) => {
+    const n = parseInt(raw, 10);
+    if (!Number.isFinite(n)) return;
+    const clamped = Math.max(0, Math.min(127, n));
+    if (field === "cc" && isReservedCc(clamped)) {
+      toast({
+        title: "Reserved MIDI CC",
+        description: `CC ${clamped} is reserved on HX Effects (${reservedCcDescription(
+          clamped,
+        )}). Choose a different CC number.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    updateInstantCommand(i, { [field]: clamped } as Partial<InstantCommand>);
+  };
+
+  const removeInstantCommand = (i: number) => {
+    setInstantCommands(instantCommands.filter((_, idx) => idx !== i));
+  };
 
   const activeEffectBlocks = useMemo(
     () =>
@@ -400,6 +473,203 @@ export default function FootswitchComponent({
         <span className={getStatusColor()} data-testid={`text-fs-${index}-status`}>
           {getStatusText()}
         </span>
+      </div>
+
+      <div className="mt-3 border-t border-studio-700 pt-3">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between text-[11px] uppercase tracking-wide text-studio-300 hover:text-white"
+          onClick={() => setInstantsOpen((v) => !v)}
+          data-testid={`button-fs-${index}-toggle-instants`}
+        >
+          <span>
+            Instant Commands{" "}
+            {instantCommands.length > 0 && (
+              <span className="text-studio-400 normal-case">
+                ({instantCommands.length})
+              </span>
+            )}
+          </span>
+          {instantsOpen ? (
+            <ChevronUp className="w-3 h-3" />
+          ) : (
+            <ChevronDown className="w-3 h-3" />
+          )}
+        </button>
+
+        {instantsOpen && (
+          <div className="mt-2 space-y-2">
+            {instantCommands.length === 0 && (
+              <p className="text-[10px] text-studio-500">
+                Send extra MIDI messages alongside the action above.
+              </p>
+            )}
+
+            {instantCommands.map((cmd, i) => {
+              const ccBad =
+                cmd.type === "cc" && cmd.cc !== undefined && isReservedCc(cmd.cc);
+              return (
+                <div
+                  key={i}
+                  className="bg-studio-900 rounded border border-studio-700 p-2 space-y-1.5"
+                  data-testid={`instant-cmd-${index}-${i}`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Select
+                      value={cmd.type}
+                      onValueChange={(v) =>
+                        updateInstantCommand(i, { type: v as "pc" | "cc" })
+                      }
+                    >
+                      <SelectTrigger className="h-7 text-xs w-20 bg-studio-700 border-studio-600 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-studio-700 border-studio-600">
+                        <SelectItem value="pc" className="text-white">
+                          PC
+                        </SelectItem>
+                        <SelectItem value="cc" className="text-white">
+                          CC
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={String(cmd.channel)}
+                      onValueChange={(raw) => {
+                        const ch: number | "base" =
+                          raw === "base"
+                            ? "base"
+                            : Math.max(1, Math.min(16, parseInt(raw, 10)));
+                        updateInstantCommand(i, { channel: ch });
+                      }}
+                    >
+                      <SelectTrigger className="h-7 text-xs flex-1 bg-studio-700 border-studio-600 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-studio-700 border-studio-600 max-h-60">
+                        <SelectItem value="base" className="text-white">
+                          Base
+                        </SelectItem>
+                        {Array.from({ length: 16 }, (_, n) => (
+                          <SelectItem
+                            key={n + 1}
+                            value={String(n + 1)}
+                            className="text-white"
+                          >
+                            ch {n + 1}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-studio-400 hover:text-red-400"
+                      onClick={() => removeInstantCommand(i)}
+                      data-testid={`button-instant-${index}-${i}-remove`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {cmd.type === "pc" ? (
+                      <div className="flex-1">
+                        <label className="text-[10px] text-studio-400 block">
+                          PC#
+                        </label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={127}
+                          value={cmd.program ?? 0}
+                          onChange={(e) =>
+                            handleInstantNumChange(i, "program", e.target.value)
+                          }
+                          className="h-7 text-xs bg-studio-700 border-studio-600 text-white"
+                          data-testid={`input-instant-${index}-${i}-pc`}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex-1">
+                          <label className="text-[10px] text-studio-400 block">
+                            CC#
+                          </label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={127}
+                            value={cmd.cc ?? 0}
+                            onChange={(e) =>
+                              handleInstantNumChange(i, "cc", e.target.value)
+                            }
+                            className={`h-7 text-xs bg-studio-700 border-studio-600 text-white ${
+                              ccBad ? "border-red-500" : ""
+                            }`}
+                            data-testid={`input-instant-${index}-${i}-cc`}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[10px] text-studio-400 block">
+                            Val
+                          </label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={127}
+                            value={cmd.ccValue ?? 0}
+                            onChange={(e) =>
+                              handleInstantNumChange(i, "ccValue", e.target.value)
+                            }
+                            className="h-7 text-xs bg-studio-700 border-studio-600 text-white"
+                            data-testid={`input-instant-${index}-${i}-val`}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {ccBad && (
+                    <div className="flex items-start gap-1.5 text-[10px] text-yellow-300 bg-yellow-950/40 border border-yellow-700 rounded px-1.5 py-1">
+                      <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <span>
+                        CC {cmd.cc} is reserved (
+                        {reservedCcDescription(cmd.cc!)}).
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="flex gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1 h-7 text-[11px] bg-studio-700 border-studio-600 text-white hover:bg-studio-600"
+                onClick={() => addInstantCommand("pc")}
+                data-testid={`button-fs-${index}-add-instant-pc`}
+              >
+                <Plus className="w-3 h-3 mr-1" /> PC
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1 h-7 text-[11px] bg-studio-700 border-studio-600 text-white hover:bg-studio-600"
+                onClick={() => addInstantCommand("cc")}
+                data-testid={`button-fs-${index}-add-instant-cc`}
+              >
+                <Plus className="w-3 h-3 mr-1" /> CC
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

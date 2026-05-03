@@ -75,17 +75,29 @@ export const midiParamsSchema = z.object({
 
 export type MidiParams = z.infer<typeof midiParamsSchema>;
 
-// Footswitch Schema. A single canonical action per footswitch (matches HLX
-// `commandFSn.@command` semantics — there is one command type per FS).
-//   - off:       no command emitted
-//   - snapshot:  recall snapshot identified by `value`
-//   - effect:    bypass-toggle the block at index `value`
-//   - midi-pc:   send Program Change (program from `midi.program`)
-//   - midi-cc:   send Continuous Controller (cc / ccValue from `midi`)
+// "Instant Command" — additional MIDI message attached to a footswitch that
+// fires alongside its local action. HX Effects' Command Center concept.
+export const instantCommandSchema = z.object({
+  type: z.enum(['pc', 'cc']),
+  channel: z.union([z.literal('base'), z.number().int().min(1).max(16)]),
+  program: z.number().int().min(0).max(127).optional(),
+  cc: z.number().int().min(0).max(127).optional(),
+  ccValue: z.number().int().min(0).max(127).optional(),
+});
+
+export type InstantCommand = z.infer<typeof instantCommandSchema>;
+
+// Footswitch Schema.
+//   - assignment: the primary action emitted as the FS's `@command`.
+//       off | snapshot | effect | midi-pc | midi-cc
+//   - midi: parameters used when assignment is midi-pc or midi-cc.
+//   - instantCommands: optional extra MIDI messages that fire alongside the
+//       primary action ("Command Center" instant commands).
 export const footswitchSchema = z.object({
   assignment: z.enum(['off', 'snapshot', 'effect', 'midi-pc', 'midi-cc']),
   value: z.string(),
   midi: midiParamsSchema.optional(),
+  instantCommands: z.array(instantCommandSchema).optional(),
 });
 
 export type Footswitch = z.infer<typeof footswitchSchema>;
