@@ -6,3 +6,9 @@ id = "ociWHJCT8mr-hIoMMcIvu"
 uri = "file://attached_assets/exports/demo_all_options.json"
 type = "unspecified"
 title = "demo_all_options.hlx (JSON view)"
+
+[[outputs]]
+id = "mvOzb4nWcPPqlE4b6cEaf"
+uri = "file://attached_assets/exports/demo_clean.json"
+type = "unspecified"
+title = "demo_clean.hlx (no _hxgen markers)"

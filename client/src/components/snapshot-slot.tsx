@@ -9,16 +9,20 @@ interface SnapshotSlotProps {
   onChange: (snapshot: Snapshot) => void;
 }
 
+// HX Edit snapshot LED palette. Order and indices match the colors HX
+// Effects renders for `@ledcolor` 1..11.
 const LED_COLORS = [
-  { value: 1, name: "White", className: "bg-white" },
-  { value: 2, name: "Red", className: "bg-red-500" },
-  { value: 3, name: "Orange", className: "bg-orange-500" },
-  { value: 4, name: "Yellow", className: "bg-yellow-400" },
-  { value: 5, name: "Green", className: "bg-green-500" },
-  { value: 6, name: "Cyan", className: "bg-cyan-400" },
-  { value: 7, name: "Blue", className: "bg-blue-500" },
-  { value: 8, name: "Purple", className: "bg-purple-500" },
-  { value: 9, name: "Pink", className: "bg-pink-500" },
+  { value: 1, name: "White", style: { backgroundColor: "#ffffff" } },
+  { value: 2, name: "Red", style: { backgroundColor: "#ff0000" } },
+  { value: 3, name: "Dark Orange", style: { backgroundColor: "#cc4400" } },
+  { value: 4, name: "Amber", style: { backgroundColor: "#ff8c00" } },
+  { value: 5, name: "Yellow", style: { backgroundColor: "#ffd700" } },
+  { value: 6, name: "Green", style: { backgroundColor: "#00b050" } },
+  { value: 7, name: "Turquoise", style: { backgroundColor: "#00d1c1" } },
+  { value: 8, name: "Blue", style: { backgroundColor: "#1e7bff" } },
+  { value: 9, name: "Lavender", style: { backgroundColor: "#9b6bff" } },
+  { value: 10, name: "Pink", style: { backgroundColor: "#ff4fa3" } },
+  { value: 11, name: "Purple", style: { backgroundColor: "#7a26d9" } },
 ];
 
 export default function SnapshotSlot({
@@ -92,7 +96,8 @@ export default function SnapshotSlot({
                 onClick={() => handleColorChange(c.value)}
                 title={c.name}
                 aria-label={`Set color ${c.name}`}
-                className={`w-4 h-4 rounded-full ${c.className} border ${
+                style={c.style}
+                className={`w-4 h-4 rounded-full border ${
                   ledcolor === c.value
                     ? "border-white ring-1 ring-blue-400"
                     : "border-studio-600"

@@ -121,12 +121,10 @@ export const generateHlxPreset = (data: PresetData): any => {
       blockStates[`block${bIdx}`] = bypass ?? b.enabled;
     });
 
-    const snapCommands =
-      snapshot.rawCommands && typeof snapshot.rawCommands === "object"
-        ? JSON.parse(JSON.stringify(snapshot.rawCommands))
-        : buildSnapshotCommandStubs(data.footswitches);
-
-    preset.data.tone[`snapshot${index}`] = {
+    // Only carry per-snapshot commands/controllers forward when the source
+    // file supplied them. We don't fabricate stubs (their meaning isn't
+    // documented well enough to invent values safely).
+    const snap: Record<string, any> = {
       "@name": snapshot.name,
       "@tempo": snapshot.tempo ?? 140,
       "@valid": true,
@@ -134,9 +132,14 @@ export const generateHlxPreset = (data: PresetData): any => {
       "@ledcolor": snapshot.ledcolor ?? index + 1,
       "@pedalstate": 0,
       blocks: { dsp0: blockStates },
-      commands: snapCommands,
-      controllers: snapshot.rawControllers ?? {},
     };
+    if (snapshot.rawCommands && typeof snapshot.rawCommands === "object") {
+      snap.commands = JSON.parse(JSON.stringify(snapshot.rawCommands));
+    }
+    if (snapshot.rawControllers && typeof snapshot.rawControllers === "object") {
+      snap.controllers = JSON.parse(JSON.stringify(snapshot.rawControllers));
+    }
+    preset.data.tone[`snapshot${index}`] = snap;
   });
 
   // ---- Footswitches ----
@@ -188,22 +191,6 @@ function footswitchMatchesOriginal(fs: Footswitch, original: any): boolean {
   return cmd !== COMMAND_HX_SNAPSHOT && cmd !== COMMAND_BLOCK_BYPASS;
 }
 
-function buildSnapshotCommandStubs(
-  footswitches: Footswitch[],
-): Record<string, any> {
-  const out: Record<string, any> = {};
-  footswitches.forEach((fs, idx) => {
-    if (fs.assignment === "off") return;
-    out[`commandFS${idx + 1}`] = {
-      "@relhold": 0,
-      "@press": idx + 3,
-      "@fs_enabled": false,
-      "@behavior": 0,
-    };
-  });
-  return out;
-}
-
 function buildFootswitchCommand(
   fs: Footswitch,
   _idx: number,
@@ -226,8 +213,6 @@ function buildFootswitchCommand(
       "@command": COMMAND_HX_SNAPSHOT,
       "@press": snapIdx + 3,
       "@fs_label": snapName.slice(0, 16),
-      "@_hxgen_kind": "snapshot",
-      "@_hxgen_index": snapIdx,
     };
   }
   if (fs.assignment === "effect" && fs.value !== "") {
@@ -241,8 +226,6 @@ function buildFootswitchCommand(
       "@command": COMMAND_BLOCK_BYPASS,
       "@press": blockIdx,
       "@fs_label": effName.slice(0, 16),
-      "@_hxgen_kind": "effect",
-      "@_hxgen_index": blockIdx,
     };
   }
   return null;
@@ -320,23 +303,6 @@ export function deriveStateFromHlx(preset: any): {
     const raw = tone[`commandFS${i + 1}`];
     if (!raw || typeof raw !== "object") continue;
 
-    const kind = raw["@_hxgen_kind"];
-    if (kind === "snapshot") {
-      footswitches[i] = {
-        assignment: "snapshot",
-        value: String(raw["@_hxgen_index"] ?? ""),
-      };
-      continue;
-    }
-    if (kind === "effect") {
-      footswitches[i] = {
-        assignment: "effect",
-        value: String(raw["@_hxgen_index"] ?? ""),
-      };
-      continue;
-    }
-
-    // No hint — best-effort guess based on @command.
     const cmd = raw["@command"];
     if (cmd === COMMAND_HX_SNAPSHOT) {
       const press = typeof raw["@press"] === "number" ? raw["@press"] : 3;
@@ -383,11 +349,7 @@ export interface DiffEntry {
   actual: any;
 }
 
-const IGNORE_KEYS = new Set([
-  "modifieddate",
-  "@_hxgen_kind",
-  "@_hxgen_index",
-]);
+const IGNORE_KEYS = new Set(["modifieddate"]);
 
 function isObject(v: any): v is Record<string, any> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
