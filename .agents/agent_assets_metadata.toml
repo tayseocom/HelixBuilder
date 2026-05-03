@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "ociWHJCT8mr-hIoMMcIvu"
+uri = "file://attached_assets/exports/demo_all_options.json"
+type = "unspecified"
+title = "demo_all_options.hlx (JSON view)"

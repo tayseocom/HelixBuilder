@@ -1,0 +1,446 @@
+{
+  "data": {
+    "meta": {
+      "name": "Demo All Options",
+      "application": "HX Edit",
+      "build_sha": "d972399",
+      "modifieddate": 1777810973,
+      "appversion": 58851328
+    },
+    "device": 2162693,
+    "tone": {
+      "variax": {
+        "@variax_model": 0,
+        "@variax_str4tuning": 0,
+        "@variax_str1tuning": 0,
+        "@variax_lockctrls": 0,
+        "@variax_str2tuning": 0,
+        "@variax_customtuning": true,
+        "@variax_magmode": false,
+        "@variax_str5tuning": 0,
+        "@variax_toneknob": -0.10000002384185791,
+        "@variax_str3tuning": 0,
+        "@variax_str6tuning": 0,
+        "@variax_volumeknob": -0.10000002384185791
+      },
+      "dsp0": {
+        "split": {
+          "@model": "HD2_AppDSPFlowSplitY",
+          "BalanceA": 0.5,
+          "@no_snapshot_bypass": false,
+          "bypass": false,
+          "@position": 0,
+          "@enabled": true,
+          "BalanceB": 0.5
+        },
+        "join": {
+          "@model": "HD2_AppDSPFlowJoin",
+          "B Pan": 0.5,
+          "@no_snapshot_bypass": false,
+          "B Level": 0,
+          "A Level": 0,
+          "A Pan": 0.5,
+          "@position": 9,
+          "Level": 0,
+          "@enabled": true,
+          "B Polarity": false
+        },
+        "inputA": {
+          "@input": 1,
+          "@model": "HelixFx_AppDSPFlowInput"
+        },
+        "inputB": {
+          "@input": 0,
+          "@model": "HelixFx_AppDSPFlowInput"
+        },
+        "outputA": {
+          "@model": "HelixFx_AppDSPFlowOutput",
+          "@output": 1,
+          "pan": 0.5,
+          "gain": 0
+        },
+        "outputB": {
+          "@model": "HelixFx_AppDSPFlowOutput",
+          "@output": 0,
+          "pan": 0.5,
+          "gain": 0
+        },
+        "block0": {
+          "@model": "HD2_CompressorOptoComp",
+          "@enabled": true,
+          "@position": 1,
+          "@no_snapshot_bypass": false,
+          "@path": 0,
+          "@type": 0,
+          "@stereo": false
+        },
+        "block1": {
+          "@model": "HD2_DistCompulsiveDrive",
+          "@enabled": false,
+          "@position": 2,
+          "@no_snapshot_bypass": false,
+          "@path": 0,
+          "@type": 0,
+          "@stereo": false
+        },
+        "block2": {
+          "@model": "HD2_EQGraphic10Band",
+          "@enabled": true,
+          "@position": 3,
+          "@no_snapshot_bypass": false,
+          "@path": 0,
+          "@type": 0,
+          "@stereo": false
+        },
+        "block3": {
+          "@model": "HD2_Chorus70sChorus",
+          "@enabled": true,
+          "@position": 4,
+          "@no_snapshot_bypass": false,
+          "@path": 0,
+          "@type": 0,
+          "@stereo": false
+        },
+        "block4": {
+          "@model": "HD2_FlangerCourtesanFlange",
+          "@enabled": true,
+          "@position": 5,
+          "@no_snapshot_bypass": false,
+          "@path": 0,
+          "@type": 0,
+          "@stereo": false
+        },
+        "block5": {
+          "@model": "HD2_TremoloPattern",
+          "@enabled": false,
+          "@position": 6,
+          "@no_snapshot_bypass": false,
+          "@path": 0,
+          "@type": 0,
+          "@stereo": false
+        },
+        "block6": {
+          "@model": "HD2_DelayBucketBrigade",
+          "@enabled": true,
+          "@position": 7,
+          "@no_snapshot_bypass": false,
+          "@path": 0,
+          "@type": 0,
+          "@stereo": false
+        },
+        "block7": {
+          "@model": "HD2_DelayAdriaticDelay",
+          "@enabled": true,
+          "@position": 8,
+          "@no_snapshot_bypass": false,
+          "@path": 0,
+          "@type": 0,
+          "@stereo": false
+        }
+      },
+      "global": {
+        "@PowercabVoicing": 0,
+        "@model": "@global_params",
+        "@topology0": "A",
+        "@cursor_dsp": 0,
+        "@PowercabMode": 0,
+        "@guitarpad": 0,
+        "@pedalstate": 0,
+        "@cursor_group": "block0",
+        "@DtSelect": 2,
+        "@cursor_path": 0,
+        "@current_snapshot": 0,
+        "@tempo": 128,
+        "@cursor_position": 1,
+        "@topology1": 0,
+        "@PowercabSelect": 2,
+        "@guitarinputZ": 0
+      },
+      "snapshot0": {
+        "@name": "Clean",
+        "@tempo": 120,
+        "@valid": true,
+        "@custom_name": true,
+        "@ledcolor": 1,
+        "@pedalstate": 0,
+        "blocks": {
+          "dsp0": {
+            "block0": true,
+            "block1": false,
+            "block2": true,
+            "block3": true,
+            "block4": false,
+            "block5": false,
+            "block6": false,
+            "block7": false
+          }
+        },
+        "commands": {
+          "commandFS1": {
+            "@relhold": 0,
+            "@press": 3,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS2": {
+            "@relhold": 0,
+            "@press": 4,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS3": {
+            "@relhold": 0,
+            "@press": 5,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS4": {
+            "@relhold": 0,
+            "@press": 6,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS5": {
+            "@relhold": 0,
+            "@press": 7,
+            "@fs_enabled": false,
+            "@behavior": 0
+          }
+        },
+        "controllers": {}
+      },
+      "snapshot1": {
+        "@name": "Lead",
+        "@tempo": 140,
+        "@valid": true,
+        "@custom_name": true,
+        "@ledcolor": 4,
+        "@pedalstate": 0,
+        "blocks": {
+          "dsp0": {
+            "block0": true,
+            "block1": true,
+            "block2": true,
+            "block3": false,
+            "block4": false,
+            "block5": false,
+            "block6": true,
+            "block7": true
+          }
+        },
+        "commands": {
+          "commandFS1": {
+            "@relhold": 0,
+            "@press": 3,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS2": {
+            "@relhold": 0,
+            "@press": 4,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS3": {
+            "@relhold": 0,
+            "@press": 5,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS4": {
+            "@relhold": 0,
+            "@press": 6,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS5": {
+            "@relhold": 0,
+            "@press": 7,
+            "@fs_enabled": false,
+            "@behavior": 0
+          }
+        },
+        "controllers": {}
+      },
+      "snapshot2": {
+        "@name": "Ambient",
+        "@tempo": 90,
+        "@valid": true,
+        "@custom_name": true,
+        "@ledcolor": 7,
+        "@pedalstate": 0,
+        "blocks": {
+          "dsp0": {
+            "block0": false,
+            "block1": false,
+            "block2": true,
+            "block3": true,
+            "block4": true,
+            "block5": true,
+            "block6": true,
+            "block7": true
+          }
+        },
+        "commands": {
+          "commandFS1": {
+            "@relhold": 0,
+            "@press": 3,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS2": {
+            "@relhold": 0,
+            "@press": 4,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS3": {
+            "@relhold": 0,
+            "@press": 5,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS4": {
+            "@relhold": 0,
+            "@press": 6,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS5": {
+            "@relhold": 0,
+            "@press": 7,
+            "@fs_enabled": false,
+            "@behavior": 0
+          }
+        },
+        "controllers": {}
+      },
+      "snapshot3": {
+        "@name": "Solo",
+        "@tempo": 160,
+        "@valid": true,
+        "@custom_name": true,
+        "@ledcolor": 2,
+        "@pedalstate": 0,
+        "blocks": {
+          "dsp0": {
+            "block0": true,
+            "block1": true,
+            "block2": true,
+            "block3": true,
+            "block4": true,
+            "block5": false,
+            "block6": true,
+            "block7": false
+          }
+        },
+        "commands": {
+          "commandFS1": {
+            "@relhold": 0,
+            "@press": 3,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS2": {
+            "@relhold": 0,
+            "@press": 4,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS3": {
+            "@relhold": 0,
+            "@press": 5,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS4": {
+            "@relhold": 0,
+            "@press": 6,
+            "@fs_enabled": false,
+            "@behavior": 0
+          },
+          "commandFS5": {
+            "@relhold": 0,
+            "@press": 7,
+            "@fs_enabled": false,
+            "@behavior": 0
+          }
+        },
+        "controllers": {}
+      },
+      "commandFS1": {
+        "@fs_primary": true,
+        "@relhold": 0,
+        "@behavior": 0,
+        "@fs_enabled": true,
+        "@fs_ledcolor": 462860,
+        "@fs_momentary": true,
+        "@command": 15,
+        "@press": 3,
+        "@fs_label": "Clean",
+        "@_hxgen_kind": "snapshot",
+        "@_hxgen_index": 0
+      },
+      "commandFS2": {
+        "@fs_primary": true,
+        "@relhold": 0,
+        "@behavior": 0,
+        "@fs_enabled": true,
+        "@fs_ledcolor": 462860,
+        "@fs_momentary": true,
+        "@command": 15,
+        "@press": 4,
+        "@fs_label": "Lead",
+        "@_hxgen_kind": "snapshot",
+        "@_hxgen_index": 1
+      },
+      "commandFS3": {
+        "@fs_primary": true,
+        "@relhold": 0,
+        "@behavior": 0,
+        "@fs_enabled": true,
+        "@fs_ledcolor": 462860,
+        "@fs_momentary": true,
+        "@command": 15,
+        "@press": 5,
+        "@fs_label": "Ambient",
+        "@_hxgen_kind": "snapshot",
+        "@_hxgen_index": 2
+      },
+      "commandFS4": {
+        "@fs_primary": true,
+        "@relhold": 0,
+        "@behavior": 0,
+        "@fs_enabled": true,
+        "@fs_ledcolor": 462860,
+        "@fs_momentary": true,
+        "@command": 15,
+        "@press": 6,
+        "@fs_label": "Solo",
+        "@_hxgen_kind": "snapshot",
+        "@_hxgen_index": 3
+      },
+      "commandFS5": {
+        "@fs_primary": true,
+        "@relhold": 0,
+        "@behavior": 0,
+        "@fs_enabled": true,
+        "@fs_ledcolor": 462860,
+        "@fs_momentary": true,
+        "@command": 4,
+        "@press": 1,
+        "@fs_label": "Compulsive Drive",
+        "@_hxgen_kind": "effect",
+        "@_hxgen_index": 1
+      }
+    },
+    "device_version": 58720256
+  },
+  "meta": {
+    "original": 0,
+    "pbn": 0,
+    "premium": 0
+  },
+  "schema": "L6Preset",
+  "version": 6
+}
