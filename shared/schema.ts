@@ -65,56 +65,22 @@ export const snapshotSchema = z.object({
 
 export type Snapshot = z.infer<typeof snapshotSchema>;
 
-// MIDI parameters used by midi-pc / midi-cc footswitch actions.
-export const midiParamsSchema = z.object({
-  channel: z.union([z.literal('base'), z.number().int().min(1).max(16)]),
-  program: z.number().int().min(0).max(127).optional(),
-  cc: z.number().int().min(0).max(127).optional(),
-  ccValue: z.number().int().min(0).max(127).optional(),
-});
-
-export type MidiParams = z.infer<typeof midiParamsSchema>;
-
-// "Instant Command" — additional MIDI message attached to a footswitch that
-// fires alongside its local action. HX Effects' Command Center concept.
-export const instantCommandSchema = z.object({
-  type: z.enum(['pc', 'cc']),
-  channel: z.union([z.literal('base'), z.number().int().min(1).max(16)]),
-  program: z.number().int().min(0).max(127).optional(),
-  cc: z.number().int().min(0).max(127).optional(),
-  ccValue: z.number().int().min(0).max(127).optional(),
-});
-
-export type InstantCommand = z.infer<typeof instantCommandSchema>;
-
-// Footswitch Schema.
-//   - assignment: the primary action emitted as the FS's `@command`.
-//       off | snapshot | effect | midi-pc | midi-cc
-//   - midi: parameters used when assignment is midi-pc or midi-cc.
-//   - instantCommands: optional extra MIDI messages that fire alongside the
-//       primary action ("Command Center" instant commands).
+// Footswitch Schema. Each footswitch has one canonical action that maps to
+// `commandFSn.@command` in the .hlx file:
+//   - off:      no command emitted
+//   - snapshot: recall snapshot identified by `value`
+//   - effect:   bypass-toggle the block at index `value`
 export const footswitchSchema = z.object({
-  assignment: z.enum(['off', 'snapshot', 'effect', 'midi-pc', 'midi-cc']),
+  assignment: z.enum(['off', 'snapshot', 'effect']),
   value: z.string(),
-  midi: midiParamsSchema.optional(),
-  instantCommands: z.array(instantCommandSchema).optional(),
 });
 
 export type Footswitch = z.infer<typeof footswitchSchema>;
 
-// Global MIDI / tempo settings.
-// Only `tempo` is actually written into the preset file (preset `global.@tempo`).
-// The other fields are device-level globals on the HX hardware and are kept
-// in the UI for completeness but are not part of `.hlx` preset payloads.
+// Preset-scoped settings actually written into the .hlx file.
+// (Device-global MIDI settings live on the hardware, not in preset files,
+// so they are intentionally not modeled here.)
 export const globalMidiSchema = z.object({
-  baseChannel: z.number().int().min(1).max(16),
-  midiThru: z.boolean(),
-  usbMidi: z.boolean(),
-  pcRx: z.enum(['off', 'midi', 'usb', 'both']),
-  pcTx: z.enum(['off', 'midi', 'usb', 'both']),
-  snapshotCcSend: z.boolean(),
-  txClock: z.enum(['off', 'midi', 'usb', 'both']),
-  rxClock: z.enum(['off', 'midi', 'usb', 'auto']),
   tempo: z.number(),
 });
 

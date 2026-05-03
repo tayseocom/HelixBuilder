@@ -33,7 +33,7 @@ import {
   DiffEntry,
 } from "@/lib/preset-utils";
 
-const STORAGE_KEY = "hx-preset-generator-v2";
+const STORAGE_KEY = "hx-preset-generator-v3";
 
 function defaultBlocks(): EffectBlock[] {
   return Array.from({ length: 9 }, (_, i) => ({
@@ -464,39 +464,14 @@ function mergeSnapshots(saved: any[]): Snapshot[] {
 
 function mergeFootswitches(saved: any[]): Footswitch[] {
   const base = defaultFootswitches();
-  const validAssignments = new Set([
-    "off",
-    "snapshot",
-    "effect",
-    "midi-pc",
-    "midi-cc",
-  ]);
+  const validAssignments = new Set(["off", "snapshot", "effect"]);
   saved.slice(0, 6).forEach((f, i) => {
-    let assignment: Footswitch["assignment"] = validAssignments.has(f?.assignment)
+    const assignment: Footswitch["assignment"] = validAssignments.has(
+      f?.assignment,
+    )
       ? f.assignment
       : "off";
-    let midi = f?.midi;
-    // Migrate legacy { type: 'none' | 'pc' | 'cc' } shape.
-    if (midi && typeof midi === "object" && "type" in midi) {
-      if (midi.type === "pc") {
-        assignment = "midi-pc";
-        midi = { channel: midi.channel ?? "base", program: midi.program ?? 0 };
-      } else if (midi.type === "cc") {
-        assignment = "midi-cc";
-        midi = {
-          channel: midi.channel ?? "base",
-          cc: midi.cc ?? 0,
-          ccValue: midi.ccValue ?? 0,
-        };
-      } else {
-        midi = undefined;
-      }
-    }
-    base[i] = {
-      assignment,
-      value: f?.value ?? "",
-      ...(midi ? { midi } : {}),
-    };
+    base[i] = { assignment, value: f?.value ?? "" };
   });
   return base;
 }

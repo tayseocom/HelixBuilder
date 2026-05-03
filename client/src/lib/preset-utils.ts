@@ -3,18 +3,9 @@ import {
   Snapshot,
   Footswitch,
   GlobalMidiSettings,
-  InstantCommand,
 } from "@shared/schema";
 import { baseHlxTemplate } from "./hlx-template";
 import { effectsMapping } from "./effects-mapping";
-import { DEFAULT_GLOBAL_MIDI, isReservedCc } from "./midi-constants";
-
-/** Key under `data.tone.global` where we persist the Global MIDI panel
- * settings. HX firmware stores these as device globals, not in preset
- * files, so we write them under our own namespace where they survive
- * round-trip and document intent. The well-known `@tempo` field is also
- * written to `data.tone.global` for HX compatibility. */
-const GLOBAL_MIDI_KEY = "@_hxgen_global_midi";
 
 export interface PresetData {
   name: string;
@@ -31,8 +22,6 @@ const NUM_FOOTSWITCHES = 6;
 
 const COMMAND_HX_SNAPSHOT = 15;
 const COMMAND_BLOCK_BYPASS = 4; // best-effort; HX Edit may relabel
-const COMMAND_MIDI_PC = 1;
-const COMMAND_MIDI_CC = 2;
 
 const DEFAULT_FS_LEDCOLOR = 462860;
 
@@ -62,7 +51,7 @@ function emptyFootswitches(): Footswitch[] {
 }
 
 export function emptyGlobalMidi(): GlobalMidiSettings {
-  return { ...DEFAULT_GLOBAL_MIDI };
+  return { tempo: 140 };
 }
 
 /**
@@ -86,22 +75,8 @@ export const generateHlxPreset = (data: PresetData): any => {
   preset.data.meta.name = data.name;
   preset.data.meta.modifieddate = Math.floor(Date.now() / 1000);
 
-  // Global / MIDI settings. `@tempo` is a known HX field; the rest are
-  // device globals that HX firmware does not read from a preset file, so we
-  // also persist the full panel under our own namespaced key for round-trip
-  // and as documentation embedded in the preset itself.
+  // Preset tempo — the only global field the .hlx format actually carries.
   preset.data.tone.global["@tempo"] = data.globalMidi.tempo;
-  preset.data.tone.global[GLOBAL_MIDI_KEY] = {
-    baseChannel: data.globalMidi.baseChannel,
-    midiThru: data.globalMidi.midiThru,
-    usbMidi: data.globalMidi.usbMidi,
-    pcRx: data.globalMidi.pcRx,
-    pcTx: data.globalMidi.pcTx,
-    snapshotCcSend: data.globalMidi.snapshotCcSend,
-    txClock: data.globalMidi.txClock,
-    rxClock: data.globalMidi.rxClock,
-    tempo: data.globalMidi.tempo,
-  };
 
   // ---- Effect blocks ----
   const dsp0 = preset.data.tone.dsp0;
@@ -146,7 +121,6 @@ export const generateHlxPreset = (data: PresetData): any => {
       blockStates[`block${bIdx}`] = bypass ?? b.enabled;
     });
 
-    // Per-snapshot footswitch command stubs (mirror top-level press values).
     const snapCommands =
       snapshot.rawCommands && typeof snapshot.rawCommands === "object"
         ? JSON.parse(JSON.stringify(snapshot.rawCommands))
@@ -202,77 +176,16 @@ function footswitchMatchesOriginal(fs: Footswitch, original: any): boolean {
     if (cmd !== COMMAND_HX_SNAPSHOT) return false;
     if (typeof press !== "number") return false;
     if (String(press - 3) !== fs.value) return false;
-  } else if (fs.assignment === "effect") {
+    return true;
+  }
+  if (fs.assignment === "effect") {
     if (cmd !== COMMAND_BLOCK_BYPASS) return false;
     if (typeof press !== "number") return false;
     if (String(press) !== fs.value) return false;
-  } else if (fs.assignment === "midi-pc") {
-    if (cmd !== COMMAND_MIDI_PC) return false;
-    if (
-      !(
-        original["@_hxgen_program"] === (fs.midi?.program ?? 0) &&
-        original["@_hxgen_channel"] === (fs.midi?.channel ?? "base")
-      )
-    ) {
-      return false;
-    }
-  } else if (fs.assignment === "midi-cc") {
-    if (cmd !== COMMAND_MIDI_CC) return false;
-    if (
-      !(
-        original["@_hxgen_cc"] === (fs.midi?.cc ?? 0) &&
-        original["@_hxgen_cc_value"] === (fs.midi?.ccValue ?? 0) &&
-        original["@_hxgen_channel"] === (fs.midi?.channel ?? "base")
-      )
-    ) {
-      return false;
-    }
-  } else if (fs.assignment === "off") {
-    if (
-      cmd === COMMAND_HX_SNAPSHOT ||
-      cmd === COMMAND_BLOCK_BYPASS ||
-      cmd === COMMAND_MIDI_PC ||
-      cmd === COMMAND_MIDI_CC
-    ) {
-      return false;
-    }
+    return true;
   }
-  // Also require instant-command lists to match.
-  return instantCommandsEqual(
-    fs.instantCommands ?? [],
-    Array.isArray(original["@_hxgen_instant_commands"])
-      ? original["@_hxgen_instant_commands"]
-      : [],
-  );
-}
-
-function instantCommandsEqual(
-  a: InstantCommand[],
-  b: any[],
-): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    const x = a[i];
-    const y = b[i];
-    if (!y || typeof y !== "object") return false;
-    if (x.type !== y.type) return false;
-    if (x.channel !== y.channel) return false;
-    if ((x.program ?? 0) !== (y.program ?? 0)) return false;
-    if ((x.cc ?? 0) !== (y.cc ?? 0)) return false;
-    if ((x.ccValue ?? 0) !== (y.ccValue ?? 0)) return false;
-  }
-  return true;
-}
-
-function buildInstantCommandsPayload(
-  fs: Footswitch,
-): InstantCommand[] | undefined {
-  if (!fs.instantCommands || fs.instantCommands.length === 0) return undefined;
-  // Filter out any reserved-CC instant commands defensively.
-  const safe = fs.instantCommands.filter(
-    (c) => !(c.type === "cc" && c.cc !== undefined && isReservedCc(c.cc)),
-  );
-  return safe.length > 0 ? safe : undefined;
+  // off
+  return cmd !== COMMAND_HX_SNAPSHOT && cmd !== COMMAND_BLOCK_BYPASS;
 }
 
 function buildSnapshotCommandStubs(
@@ -305,12 +218,10 @@ function buildFootswitchCommand(
     "@fs_momentary": true,
   };
 
-  let payload: Record<string, any> | null = null;
-
   if (fs.assignment === "snapshot" && fs.value !== "") {
     const snapIdx = Number(fs.value);
     const snapName = data.snapshots[snapIdx]?.name || `Snapshot ${snapIdx + 1}`;
-    payload = {
+    return {
       ...base,
       "@command": COMMAND_HX_SNAPSHOT,
       "@press": snapIdx + 3,
@@ -318,13 +229,14 @@ function buildFootswitchCommand(
       "@_hxgen_kind": "snapshot",
       "@_hxgen_index": snapIdx,
     };
-  } else if (fs.assignment === "effect" && fs.value !== "") {
+  }
+  if (fs.assignment === "effect" && fs.value !== "") {
     const blockIdx = Number(fs.value);
     const block = data.effectBlocks[blockIdx];
     const effName =
       effectsMapping.find((e) => e.internal === block?.effect)?.friendly ||
       `Block ${blockIdx + 1}`;
-    payload = {
+    return {
       ...base,
       "@command": COMMAND_BLOCK_BYPASS,
       "@press": blockIdx,
@@ -332,56 +244,8 @@ function buildFootswitchCommand(
       "@_hxgen_kind": "effect",
       "@_hxgen_index": blockIdx,
     };
-  } else if (fs.assignment === "midi-pc") {
-    const program = fs.midi?.program ?? 0;
-    const channel = fs.midi?.channel ?? "base";
-    payload = {
-      ...base,
-      "@command": COMMAND_MIDI_PC,
-      "@press": program,
-      "@midi_channel": channel,
-      "@fs_label": `PC ${program}`,
-      "@_hxgen_kind": "midi-pc",
-      "@_hxgen_program": program,
-      "@_hxgen_channel": channel,
-    };
-  } else if (fs.assignment === "midi-cc") {
-    const cc = fs.midi?.cc ?? 0;
-    const ccValue = fs.midi?.ccValue ?? 0;
-    const channel = fs.midi?.channel ?? "base";
-    if (isReservedCc(cc)) {
-      payload = null; // Defensive: refuse to export reserved CCs.
-    } else {
-      payload = {
-        ...base,
-        "@command": COMMAND_MIDI_CC,
-        "@press": ccValue,
-        "@midi_channel": channel,
-        "@midi_cc": cc,
-        "@fs_label": `CC ${cc}`,
-        "@_hxgen_kind": "midi-cc",
-        "@_hxgen_cc": cc,
-        "@_hxgen_cc_value": ccValue,
-        "@_hxgen_channel": channel,
-      };
-    }
   }
-
-  // Attach optional Instant Commands list (Command Center extras) to the
-  // payload, or — if there's no primary action but there are instant
-  // commands — emit a "container" payload that just carries the list.
-  const instants = buildInstantCommandsPayload(fs);
-  if (payload && instants) {
-    payload["@_hxgen_instant_commands"] = instants;
-  } else if (!payload && instants) {
-    payload = {
-      ...base,
-      "@_hxgen_kind": "instant-only",
-      "@_hxgen_instant_commands": instants,
-    };
-  }
-
-  return payload;
+  return null;
 }
 
 export const exportPresetAsFile = (data: PresetData) => {
@@ -419,7 +283,6 @@ export function deriveStateFromHlx(preset: any): {
     if (!raw || typeof raw !== "object") continue;
     const params: Record<string, any> = {};
     for (const [k, v] of Object.entries(raw)) {
-      // Keep only model-specific (non-`@`) parameters in `params`.
       if (!k.startsWith("@")) params[k] = v;
     }
     effectBlocks[i] = {
@@ -438,7 +301,6 @@ export function deriveStateFromHlx(preset: any): {
     const blockBypass = Array.from({ length: NUM_BLOCKS }, (_, b) => {
       const v = raw?.blocks?.dsp0?.[`block${b}`];
       if (typeof v === "boolean") return v;
-      // Fall back to the master enabled state for the block.
       return effectBlocks[b]?.enabled ?? false;
     });
 
@@ -458,73 +320,19 @@ export function deriveStateFromHlx(preset: any): {
     const raw = tone[`commandFS${i + 1}`];
     if (!raw || typeof raw !== "object") continue;
 
-    // Recover any saved Instant Commands list.
-    const rawInstants = raw["@_hxgen_instant_commands"];
-    const instantCommands: InstantCommand[] | undefined = Array.isArray(
-      rawInstants,
-    )
-      ? (rawInstants
-          .map((c: any) => {
-            if (!c || typeof c !== "object") return null;
-            if (c.type !== "pc" && c.type !== "cc") return null;
-            return {
-              type: c.type,
-              channel: c.channel ?? "base",
-              program: c.program,
-              cc: c.cc,
-              ccValue: c.ccValue,
-            } as InstantCommand;
-          })
-          .filter((c): c is InstantCommand => c !== null))
-      : undefined;
-    const withInstants = (
-      fs: Omit<Footswitch, "instantCommands">,
-    ): Footswitch =>
-      instantCommands && instantCommands.length > 0
-        ? { ...fs, instantCommands }
-        : fs;
-
-    // Prefer our hidden round-trip hints if present.
     const kind = raw["@_hxgen_kind"];
     if (kind === "snapshot") {
-      footswitches[i] = withInstants({
+      footswitches[i] = {
         assignment: "snapshot",
         value: String(raw["@_hxgen_index"] ?? ""),
-      });
+      };
       continue;
     }
     if (kind === "effect") {
-      footswitches[i] = withInstants({
+      footswitches[i] = {
         assignment: "effect",
         value: String(raw["@_hxgen_index"] ?? ""),
-      });
-      continue;
-    }
-    if (kind === "midi-pc") {
-      footswitches[i] = withInstants({
-        assignment: "midi-pc",
-        value: "",
-        midi: {
-          channel: raw["@_hxgen_channel"] ?? "base",
-          program: raw["@_hxgen_program"] ?? 0,
-        },
-      });
-      continue;
-    }
-    if (kind === "midi-cc") {
-      footswitches[i] = withInstants({
-        assignment: "midi-cc",
-        value: "",
-        midi: {
-          channel: raw["@_hxgen_channel"] ?? "base",
-          cc: raw["@_hxgen_cc"] ?? 0,
-          ccValue: raw["@_hxgen_cc_value"] ?? 0,
-        },
-      });
-      continue;
-    }
-    if (kind === "instant-only") {
-      footswitches[i] = withInstants({ assignment: "off", value: "" });
+      };
       continue;
     }
 
@@ -533,55 +341,18 @@ export function deriveStateFromHlx(preset: any): {
     if (cmd === COMMAND_HX_SNAPSHOT) {
       const press = typeof raw["@press"] === "number" ? raw["@press"] : 3;
       const snapIdx = Math.max(0, Math.min(NUM_SNAPSHOTS - 1, press - 3));
-      footswitches[i] = withInstants({
-        assignment: "snapshot",
-        value: String(snapIdx),
-      });
+      footswitches[i] = { assignment: "snapshot", value: String(snapIdx) };
     } else if (cmd === COMMAND_BLOCK_BYPASS) {
       const press = typeof raw["@press"] === "number" ? raw["@press"] : 0;
-      footswitches[i] = withInstants({
-        assignment: "effect",
-        value: String(press),
-      });
-    } else if (cmd === COMMAND_MIDI_PC) {
-      footswitches[i] = withInstants({
-        assignment: "midi-pc",
-        value: "",
-        midi: {
-          channel: raw["@midi_channel"] ?? "base",
-          program: typeof raw["@press"] === "number" ? raw["@press"] : 0,
-        },
-      });
-    } else if (cmd === COMMAND_MIDI_CC) {
-      footswitches[i] = withInstants({
-        assignment: "midi-cc",
-        value: "",
-        midi: {
-          channel: raw["@midi_channel"] ?? "base",
-          cc: typeof raw["@midi_cc"] === "number" ? raw["@midi_cc"] : 0,
-          ccValue: typeof raw["@press"] === "number" ? raw["@press"] : 0,
-        },
-      });
-    } else if (instantCommands && instantCommands.length > 0) {
-      footswitches[i] = withInstants({ assignment: "off", value: "" });
+      footswitches[i] = { assignment: "effect", value: String(press) };
     }
   }
 
-  // Global MIDI: prefer our persisted bag, then `@tempo`, then defaults.
-  const persistedGlobal = tone?.global?.[GLOBAL_MIDI_KEY];
-  const globalMidi: GlobalMidiSettings = {
-    ...DEFAULT_GLOBAL_MIDI,
-    ...(persistedGlobal && typeof persistedGlobal === "object"
-      ? persistedGlobal
-      : {}),
-    tempo:
-      (persistedGlobal && typeof persistedGlobal.tempo === "number"
-        ? persistedGlobal.tempo
-        : undefined) ??
-      (typeof tone?.global?.["@tempo"] === "number"
-        ? tone.global["@tempo"]
-        : DEFAULT_GLOBAL_MIDI.tempo),
-  };
+  const tempo =
+    typeof tone?.global?.["@tempo"] === "number"
+      ? tone.global["@tempo"]
+      : 140;
+  const globalMidi: GlobalMidiSettings = { tempo };
 
   return { name, effectBlocks, snapshots, footswitches, globalMidi };
 }
@@ -614,17 +385,8 @@ export interface DiffEntry {
 
 const IGNORE_KEYS = new Set([
   "modifieddate",
-  // Hidden round-trip hints / namespaced keys we add on export but
-  // the source file won't have.
   "@_hxgen_kind",
   "@_hxgen_index",
-  "@_hxgen_local",
-  "@_hxgen_program",
-  "@_hxgen_cc",
-  "@_hxgen_cc_value",
-  "@_hxgen_channel",
-  "@_hxgen_instant_commands",
-  GLOBAL_MIDI_KEY,
 ]);
 
 function isObject(v: any): v is Record<string, any> {
@@ -640,7 +402,6 @@ function diffJson(
   if (out.length >= 50) return;
 
   if (typeof expected === "number" && typeof actual === "number") {
-    // Tolerate float drift from JSON.parse round-trip.
     if (Math.abs(expected - actual) > 1e-6) {
       out.push({ path, expected, actual });
     }
