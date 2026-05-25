@@ -88,7 +88,18 @@ export const generateHlxPreset = (data: PresetData): any => {
       continue;
     }
     const existed = !!(dsp0[blockKey] && typeof dsp0[blockKey] === "object");
-    const existing: Record<string, any> = existed ? dsp0[blockKey] : {};
+    const existingRaw: Record<string, any> = existed ? dsp0[blockKey] : {};
+    // If the user switched this block to a different model, the previous
+    // model's parameter keys (Tone/Mix/Time/...) no longer apply. Drop
+    // every non-`@` key from the original so we don't carry stale params
+    // into the new model's block. Internal `@`-prefixed fields are kept.
+    const modelChanged =
+      existed && existingRaw["@model"] && existingRaw["@model"] !== block.effect;
+    const existing: Record<string, any> = modelChanged
+      ? Object.fromEntries(
+          Object.entries(existingRaw).filter(([k]) => k.startsWith("@")),
+        )
+      : existingRaw;
     const merged: Record<string, any> = {
       ...existing,
       ...(block.params || {}),
