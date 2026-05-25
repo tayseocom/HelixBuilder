@@ -75,3 +75,14 @@ Preferred communication style: Simple, everyday language.
 - **esbuild**: Fast JavaScript bundler for production
 - **PostCSS & Autoprefixer**: CSS processing
 - **@replit/vite-plugin-runtime-error-modal**: Development error handling
+
+## Deployment
+
+The frontend is a static SPA and can be deployed to Cloudflare Pages without the Express server. See `DEPLOY.md` for the full settings. Quick reference:
+
+- Build command: `npm run build`
+- Build output directory: `dist/public`
+- Node version: `20` (`NODE_VERSION=20`)
+- SPA fallback: `client/public/_redirects` ships `/* /index.html 200` so `wouter` routes resolve on hard reloads.
+
+The app stores all state in browser `localStorage` and makes no `/api/*` requests, so the bundled Express server is not required in production.
